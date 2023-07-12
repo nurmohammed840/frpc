@@ -1,0 +1,11 @@
+[package]
+name = "frpc-example"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }
+
+frpc = { path = "../" }
+frpc-transport-http = { path = "../frpc/transport-http" }
+frpc-codegen-client = { path = "../frpc/codegen-client" }

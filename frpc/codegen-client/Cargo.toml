@@ -1,0 +1,17 @@
+[package]
+name = "frpc-codegen-client"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+# crate-type = ["dylib"]
+
+[features]
+default = []
+serde = ["dep:serde"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"], default-features = false, optional = true }
+
+frpc-codegen = { version = "0.1", path = "../codegen" }
+frpc-message = { version = "0.1",path = "../message" }

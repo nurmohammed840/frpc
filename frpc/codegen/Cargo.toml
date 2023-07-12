@@ -1,0 +1,8 @@
+[package]
+name = "frpc-codegen"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+std-lib = { version = "0.1", path = "../../libs/std-lib" }
+frpc-message = { version = "0.1", path = "../message" }

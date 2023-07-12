@@ -1,0 +1,16 @@
+[package]
+name = "frpc-message"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = []
+
+hash = ["type-id/hash"]
+debug = ["type-id/debug"]
+clone = ["type-id/clone"]
+serde = ["type-id/serde", "dep:serde"]
+
+[dependencies]
+type-id = { path = "../../libs/type-id", version = "0.1" }
+serde = { version = "1", features = ["derive"], default-features = false, optional = true }

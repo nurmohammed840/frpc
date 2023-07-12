@@ -1,0 +1,13 @@
+[package]
+name = "frpc-macros"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = "2.0"
+quote2 = "0.7"
+type-id-derive-impl = { version = "0.1", path = "../../libs/type-id-derive-impl" }
+databuf_derive_impl = "0.1"
