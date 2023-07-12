@@ -30,3 +30,6 @@ jobs:
 
     - name: Run cargo tests
       run: cargo test
+  
+    - name: Run simple bench
+      run: cargo run -r --example bench
