@@ -23,30 +23,38 @@ fn add(a: u8, b: u8) -> Return<u8> {
 
 #[inline(never)]
 async fn normal() -> Vec<u8> {
-    let mut nums = vec![];
+    let mut tcp = vec![];
     for i in 0..ITER {
         let data = [i as u8, i as u8];
         let mut cursor = data.as_slice();
-        nums.write_all(&[Box::pin(async {
+
+        // Why `.write_all()` instade of `.push()` ?
+        // Ans: transport layer usually don't have push method.
+
+        tcp.write_all(&[Box::pin(async {
+            // Why `Box::pin(...)` ? Ans: see [FutState] in `./src/output.rs`
+
+            // Why `Decode::decode()` ? Some sort of decoding in needed in any protocol.
             let a = Decode::decode::<{ frpc::DATABUF_CONFIG }>(&mut cursor).unwrap();
             let b = Decode::decode::<{ frpc::DATABUF_CONFIG }>(&mut cursor).unwrap();
+
             add(a, b).0
         })
         .await])
             .unwrap();
     }
-    nums
+    tcp
 }
 
 #[inline(never)]
 async fn rpc() -> Vec<u8> {
-    let mut nums = DummyTransport(vec![]);
+    let mut tcp = DummyTransport(vec![]);
     for i in 0..ITER {
         let data = [i as u8, i as u8];
         let mut cursor = data.as_slice();
-        frpc::Output::produce(add, (), &mut cursor, &mut nums).await
+        frpc::Output::produce(add, (), &mut cursor, &mut tcp).await
     }
-    nums.0
+    tcp.0
 }
 
 struct DummyTransport(Vec<u8>);
