@@ -32,9 +32,10 @@ async fn normal() -> Vec<u8> {
         // Ans: transport layer usually don't have push method.
 
         tcp.write_all(&[Box::pin(async {
-            // Why `Box::pin(...)` ? Ans: see [FutState] in `./src/output.rs`
+            // Why `Box::pin(...)` ? see [FutState] in `./src/output.rs` for more.
 
-            // Why `Decode::decode()` ? Some sort of decoding in needed in any protocol.
+            // Why `Decode::decode()` ?
+            // Ans: Some sort of decoding in needed in any protocol.
             let a = Decode::decode::<{ frpc::DATABUF_CONFIG }>(&mut cursor).unwrap();
             let b = Decode::decode::<{ frpc::DATABUF_CONFIG }>(&mut cursor).unwrap();
 
