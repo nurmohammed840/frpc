@@ -1,3 +1,4 @@
+use crate::State;
 use databuf::{Decode, Result};
 
 // ----------------------------------------------------------------------
@@ -12,6 +13,12 @@ where
 {
     fn decode(_: State, data: &mut &'de [u8]) -> Result<Self> {
         Args::decode::<{ crate::DATABUF_CONFIG }>(data)
+    }
+}
+
+impl<T> FirstArg<'_, T> for State<T> {
+    fn decode(state: T, _: &mut &[u8]) -> databuf::Result<Self> {
+        Ok(State(state))
     }
 }
 

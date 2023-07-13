@@ -1,8 +1,11 @@
+#![warn(missing_docs)]
+
 use std::{
     io::{self, Result},
     task::{Context, Poll},
 };
 
+#[doc(hidden)]
 pub type BoxFuture<'a, T> = std::pin::Pin<Box<dyn std::future::Future<Output = T> + Send + 'a>>;
 
 /// It defines the behavior for sending responses over a transport channel.

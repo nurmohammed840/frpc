@@ -1,3 +1,9 @@
+In [Server-Sent Events](https://en.wikipedia.org/wiki/Server-sent_events),
+server returns a stream of messages in response to a client’s request.
+
+### Example
+
+```rust
 use frpc::*;
 use std::time::{Duration, Instant};
 use tokio::time::sleep;
@@ -27,3 +33,16 @@ declare! {
         rpc get_events = 1;
     }
 }
+```
+
+In typescript:
+
+```ts
+import { HttpTransport } from "../out/http.transport.ts";
+import ServerSentEvents from "../out/ServerSentEvents.ts";
+
+let sse = new ServerSentEvents(new HttpTransport("<URI>"));
+for await (const ev of sse.get_events(3)) {
+  console.log(ev);
+}
+```

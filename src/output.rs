@@ -2,7 +2,28 @@ use super::*;
 use async_gen::futures_core::future::BoxFuture;
 use std::{io::Result, marker::PhantomData};
 
+/// It represents the output of an rpc function.
+///
+/// User cannot implement this trait.
+/// It is mainly used to infer the return type.
+///
+/// ## Example
+///
+/// ```
+/// use frpc::*;
+///
+/// // same as: `fn async add(a: u32, b: u32) -> Result<u32, &'static str>;`
+/// fn div(a: u32, b: u32) -> impl Output {
+///     async move {
+///         if b == 0 {
+///             return Err("Cannot be divided by zero");
+///         }
+///         Ok(a / b)
+///     }
+/// }
+/// ```
 pub trait Output: crate::output_type::OutputType {
+    #[doc(hidden)]
     fn produce<'fut, 'cursor, 'data, 'transport, State, Args>(
         func: impl std_lib::FnOnce<Args, Output = Self> + Send + 'fut,
         state: State,

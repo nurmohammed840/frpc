@@ -2,7 +2,7 @@
 
 import { HttpTransport } from "../out/http.transport.ts";
 
-import SSE from "../out/ServerSentEvents.ts";
+import ServerSentEvents from "../out/ServerSentEvents.ts";
 import Stateful from "../out/Stateful.ts";
 import Greeter from "../out/Greeter.ts";
 
@@ -11,9 +11,9 @@ console.log(await greeter.SayHello({ name: "Nur!" }));
 console.log(await greeter.SayHelloAgain({ name: "Mo!" }));
 
 
-let sse = new SSE(new HttpTransport("https://localhost:4433/sse"));
-for await (const msg of sse.say_hello_many_times(3, 300)) {
-    console.log(msg);
+let sse = new ServerSentEvents(new HttpTransport("https://localhost:4433/sse"));
+for await (const ev of sse.get_events(3)) {
+    console.log(ev);
 }
 
 

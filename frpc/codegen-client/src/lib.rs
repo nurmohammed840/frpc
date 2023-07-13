@@ -1,3 +1,5 @@
+//!
+#![warn(missing_docs)]
 mod code_writer;
 
 use code_writer::CodeWriter;
@@ -12,6 +14,7 @@ use serde::Deserialize;
 type Result<T = (), E = Box<dyn std::error::Error>> = std::result::Result<T, E>;
 
 impl Config {
+    /// Gererate bindings for verious languages/platforms.
     pub fn generate_binding(&self, defs: &[&TypeDef]) -> Result {
         for type_def in defs {
             let writer = CodeWriter::from(*type_def);
@@ -23,15 +26,19 @@ impl Config {
     }
 }
 
+/// JS/TS codegen configuration
 pub mod typescript {
     use super::*;
 
+    /// JS/TS codegen configuration
     #[derive(Debug, Clone)]
     #[cfg_attr(feature = "serde", derive(Deserialize))]
     pub struct Config {
+        /// Specify an output folder for all emitted files.
         #[cfg_attr(feature = "serde", serde(default = "out_dir"))]
         #[cfg_attr(feature = "serde", serde(rename = "out-dir"))]
         pub out_dir: PathBuf,
+        /// preserve file extension when importing modules
         #[cfg_attr(feature = "serde", serde(default))]
         #[cfg_attr(feature = "serde", serde(rename = "preserve-import-extension"))]
         pub preserve_import_extension: bool,
@@ -49,7 +56,9 @@ pub mod typescript {
 
 #[derive(Debug, Clone, Default)]
 #[cfg_attr(feature = "serde", derive(Deserialize))]
+/// codegen configuration
 pub struct Config {
+    /// It generate js/ts bindings when present
     pub typescript: Option<typescript::Config>,
 }
 
