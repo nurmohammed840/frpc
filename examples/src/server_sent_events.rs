@@ -6,8 +6,8 @@ use tokio::time::sleep;
 struct Event {
     elapsed: u64,
 }
-// SSE<async_gen::AsyncGen<impl Future<Output = async_gen::Return<Result<(), String>>>, Event>>
-fn get_events(count: u8) -> SSE<impl AsyncGenerator<Yield = Event, Return = Result<(), String>>> {
+
+fn get_events(count: u8) -> impl Output {
     sse! {
         if count > 10 {
             return Err(format!("count: {count} should be <= 10"));
