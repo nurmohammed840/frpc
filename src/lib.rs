@@ -12,6 +12,7 @@ pub use async_gen;
 
 pub use databuf;
 pub use frpc_macros::*;
+#[doc(hidden)]
 pub use frpc_transport_core::Transport;
 pub use output::*;
 // pub use service::Service;
@@ -57,7 +58,7 @@ def!(
     /// Represent the state of a service. and used to share state between rpc.
     ///
     /// ```rust
-    #[doc = include_str!("../example/src/stateful.rs")]
+    #[doc = include_str!("../examples/src/stateful.rs")]
     /// ```
     struct State
 );
@@ -92,7 +93,7 @@ def!(
 /// Also known as [Server-Sent Events (SSE)](https://en.wikipedia.org/wiki/Server-sent_events).
 ///
 /// ```rust
-#[doc = include_str!("../example/src/server_sent_events.rs")]
+#[doc = include_str!("../examples/src/server_sent_events.rs")]
 /// ```
 #[macro_export]
 macro_rules! sse {

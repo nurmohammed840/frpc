@@ -1,6 +1,6 @@
 /target
 Cargo.lock
 
-example/out
+examples/out
 
 tests/playground.*

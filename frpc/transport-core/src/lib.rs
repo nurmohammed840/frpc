@@ -1,5 +1,3 @@
-#![warn(missing_docs)]
-
 use std::{
     io::{self, Result},
     task::{Context, Poll},

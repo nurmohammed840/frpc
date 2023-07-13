@@ -49,8 +49,8 @@ async fn main() -> Result<()> {
     }
 
     let addr = "127.0.0.1:4433";
-    let cert = fs::read("example/cert.pem")?;
-    let key = fs::read("example/key.pem")?;
+    let cert = fs::read("examples/cert.pem")?;
+    let key = fs::read("examples/key.pem")?;
 
     let (server, recv_close_signal) = Server::bind(addr, &mut &*cert, &mut &*key)
         .await
@@ -99,6 +99,7 @@ fn run_js(path: &str) -> Result<Output> {
             "run",
             "--allow-net=localhost",
             "--unsafely-ignore-certificate-errors=localhost",
+            "--check",
             path,
         ])
         .stdout(Stdio::inherit())

@@ -1,5 +1,5 @@
 [workspace]
-members = ["libs/*", "frpc/*", "example"]
+members = ["libs/*", "frpc/*"]
 
 [package]
 name = "frpc"
@@ -12,7 +12,7 @@ repository = "https://github.com/nurmohammed840/frpc.rs"
 keywords = ["rpc"]
 description = "RPC framework"
 
-exclude = ["/example","/examples", "/tests",  ".*"]
+exclude = ["/examples", "/tests",  ".*"]
 
 [dependencies]
 databuf = "0.4"
@@ -24,7 +24,7 @@ frpc-message = { version = "0.1", path = "frpc/message" }
 frpc-transport-core = { version = "0.1", path = "frpc/transport-core" }
 
 [dev-dependencies]
-tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }
 frpc-transport-http = { path = "frpc/transport-http" }
 frpc-codegen-client = { path = "frpc/codegen-client" }
 
