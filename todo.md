@@ -2,7 +2,7 @@
 
 ### Features
 
-- Add Uni and Bi-Directional streams.
+- Add Uni streams.
 
 ### Clients
 

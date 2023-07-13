@@ -4,19 +4,18 @@ use tokio::time::sleep;
 
 #[derive(Output)]
 struct Event {
-    id: u8,
     elapsed: u64,
 }
-
-fn get_events(count: u8) -> impl Output {
+// SSE<async_gen::AsyncGen<impl Future<Output = async_gen::Return<Result<(), String>>>, Event>>
+fn get_events(count: u8) -> SSE<impl AsyncGenerator<Yield = Event, Return = Result<(), String>>> {
     sse! {
         if count > 10 {
             return Err(format!("count: {count} should be <= 10"));
         }
         let time = Instant::now();
-        for id in 0..count {
+        for _ in 0..count {
             sleep(Duration::from_secs(1)).await;
-            yield Event { id, elapsed: time.elapsed().as_secs() }
+            yield Event { elapsed: time.elapsed().as_secs() }
         }
         Ok(())
     }

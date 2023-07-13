@@ -30,7 +30,7 @@ fn message_expand(
     output.into()
 }
 
-/// [Input] + [Output]
+/// Represent both [Input] + [Output]
 #[proc_macro_derive(Message)]
 pub fn message(input: TokenStream) -> TokenStream {
     message_expand(input, |crate_path, input, output| {
