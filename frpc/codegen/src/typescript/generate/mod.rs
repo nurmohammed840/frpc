@@ -82,20 +82,25 @@ fn fmt_ty<'a>(ty: &'a Ty, scope: &'a str) -> fmt!(type 'a) {
     })
 }
 
-#[test]
-#[rustfmt::skip]
-fn test_fmt_tuple() {
-    use Ty::*;
-    let tys = vec![
-        Option(Box::new(bool)),
-        Result(Box::new((CustomType("::path::ident".into()), String))),
-        Map {
-            variant: MapVariant::BTreeMap,
-            ty: Box::new((String, Set { variant: SetVariant::BTreeSet, ty: Box::new(u8), })),
-        },
-    ];
-    assert_eq!(
-        format!("{}", fmt_ty(&Tuple(tys), "This")),
-        "d.tuple(d.option(d.bool),d.result(This.PathIdent.bind(0, d), d.str),d.map(d.str, d.vec(d.u8)),)"
-    );
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[rustfmt::skip]
+    fn test_fmt_tuple() {
+        use Ty::*;
+        let tys = vec![
+            Option(Box::new(bool)),
+            Result(Box::new((CustomType("::path::ident".into()), String))),
+            Map {
+                variant: MapVariant::BTreeMap,
+                ty: Box::new((String, Set { variant: SetVariant::BTreeSet, ty: Box::new(u8), })),
+            },
+        ];
+        assert_eq!(
+            format!("{}", fmt_ty(&Tuple(tys), "This")),
+            "d.tuple(d.option(d.bool),d.result(This.PathIdent.bind(0, d), d.str),d.map(d.str, d.vec(d.u8)),)"
+        );
+    }
 }

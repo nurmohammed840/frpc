@@ -15,7 +15,7 @@ description = "RPC framework"
 exclude = ["/examples", "/tests",  ".*"]
 
 [dependencies]
-databuf = "0.4"
+databuf = "0.5"
 async-gen = "0.2.3"
 std-lib = { version = "0.1", path = "libs/std-lib" }
 

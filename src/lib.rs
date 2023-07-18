@@ -30,7 +30,7 @@ use std::{
 };
 
 #[doc(hidden)]
-pub const DATABUF_CONFIG: u8 = databuf::config::num::LEB128 | databuf::config::len::BEU30;
+pub const DATABUF_CONFIG: u16 = databuf::config::num::LEB128 | databuf::config::len::BEU30;
 
 macro_rules! def {
     ($(#[$doc:meta])* struct $name: ident) => {

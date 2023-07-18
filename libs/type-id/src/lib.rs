@@ -137,6 +137,35 @@ pub struct CustomType<Field> {
     pub fields: Vec<Field>,
 }
 
+macro_rules! enum_repr {
+    [$($ty: ty => $var: ident)*] => {
+        #[cfg_attr(feature = "hash", derive(Hash))]
+        #[cfg_attr(feature = "debug", derive(Debug))]
+        #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+        #[derive(Clone, Copy)]
+        pub enum EnumRepr { $($var($ty)),* }
+        $(
+            impl From<$ty> for EnumRepr {
+                fn from(v: $ty) -> Self {
+                    Self::$var(v)
+                }
+            }
+        )*
+    };
+}
+enum_repr! {
+    u8 => U8
+    u16 => U16
+    u32 => U32
+    u64 => U64
+    usize => Usize
+    i8 => I8
+    i16 => I16
+    i32 => I32
+    i64 => I64
+    isize => Isize
+}
+
 #[cfg_attr(feature = "hash", derive(Hash))]
 #[cfg_attr(feature = "clone", derive(Clone))]
 #[cfg_attr(feature = "debug", derive(Debug))]
@@ -144,7 +173,7 @@ pub struct CustomType<Field> {
 pub struct UnitField {
     pub doc: String,
     pub name: Ident,
-    pub value: isize,
+    pub value: EnumRepr,
 }
 
 #[cfg_attr(feature = "hash", derive(Hash))]
@@ -155,6 +184,7 @@ pub struct EnumField {
     pub doc: String,
     pub name: Ident,
     pub kind: EnumKind,
+    pub index: Option<EnumRepr>,
 }
 
 #[cfg_attr(feature = "hash", derive(Hash))]
@@ -230,21 +260,22 @@ impl<Field> CustomType<Field> {
 }
 
 impl UnitField {
-    pub fn new(doc: &str, name: &str, value: isize) -> Self {
+    pub fn new(doc: &str, name: &str, value: impl Into<EnumRepr>) -> Self {
         Self {
             doc: doc.to_string(),
             name: Ident(name.to_string()),
-            value,
+            value: value.into(),
         }
     }
 }
 
 impl EnumField {
-    pub fn new(doc: &str, name: &str, kind: EnumKind) -> Self {
+    pub fn new(doc: &str, name: &str, kind: EnumKind, index: Option<impl Into<EnumRepr>>) -> Self {
         Self {
             doc: doc.to_string(),
             name: Ident(name.to_string()),
             kind,
+            index: index.map(|v| v.into()),
         }
     }
 }

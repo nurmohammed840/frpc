@@ -1,5 +1,6 @@
 mod declare;
 
+use databuf_derive_impl::Expand;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote2::{proc_macro2, quote, Quote};
@@ -13,10 +14,7 @@ macro_rules! crate_path {
     });
 }
 
-fn message_expand(
-    input: TokenStream,
-    f: impl FnOnce(&TokenStream2, &DeriveInput, &mut TokenStream2),
-) -> TokenStream {
+fn message_expand(input: TokenStream, f: impl FnOnce(Expand)) -> TokenStream {
     let input: DeriveInput = parse_macro_input!(input);
     let mut output = TokenStream2::new();
 
@@ -25,28 +23,35 @@ fn message_expand(
         &input,
         &mut output,
     );
-    let databuf_path = crate_path!(::frpc::databuf);
-    f(&databuf_path, &input, &mut output);
+    f(Expand::new(
+        crate_path!(::frpc::databuf),
+        &input,
+        &mut output,
+    ));
     output.into()
 }
 
 /// Represent both [Input] + [Output]
 #[proc_macro_derive(Message)]
 pub fn message(input: TokenStream) -> TokenStream {
-    message_expand(input, |crate_path, input, output| {
-        databuf_derive_impl::encode::expand(crate_path, input, output);
-        databuf_derive_impl::decode::expand(crate_path, input, output);
+    message_expand(input, |mut expand| {
+        expand.encoder();
+        expand.decoder();
     })
 }
 
 #[proc_macro_derive(Input)]
 pub fn input(input: TokenStream) -> TokenStream {
-    message_expand(input, databuf_derive_impl::decode::expand)
+    message_expand(input, |mut expand| {
+        expand.decoder();
+    })
 }
 
 #[proc_macro_derive(Output)]
 pub fn output(input: TokenStream) -> TokenStream {
-    message_expand(input, databuf_derive_impl::encode::expand)
+    message_expand(input, |mut expand| {
+        expand.encoder();
+    })
 }
 
 #[proc_macro]

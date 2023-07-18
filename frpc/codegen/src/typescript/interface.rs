@@ -2,32 +2,55 @@ use crate::utils::{join, object_ident_from, write_doc_comments};
 use frpc_message::*;
 use std::fmt::{Display, Result, Write};
 
-// pub fn generate(w: &mut impl Write, type_def: &TypeDef) -> Result {
-//     for Func {
-//         index: _,
-//         path,
-//         args,
-//         retn,
-//     } in &type_def.funcs
-//     {
-//         let name = object_ident_from(path);
-//         let args = join(args.iter().map(fmt_js_ty), ", ");
-//         writeln!(w, "function {name}({args}): {}", fmt_js_ty(retn))?;
-//     }
-//     Ok(())
-// }
+struct EnumReprValue(EnumRepr);
+
+impl Display for EnumReprValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result {
+        match self.0 {
+            EnumRepr::U8(v) => write!(f, "{v}"),
+            EnumRepr::U16(v) => write!(f, "{v}"),
+            EnumRepr::U32(v) => write!(f, "{v}"),
+            EnumRepr::U64(v) => write!(f, "{v}n"),
+            EnumRepr::Usize(v) => write!(f, "{v}n"),
+            EnumRepr::I8(v) => write!(f, "{v}"),
+            EnumRepr::I16(v) => write!(f, "{v}"),
+            EnumRepr::I32(v) => write!(f, "{v}"),
+            EnumRepr::I64(v) => write!(f, "{v}n"),
+            EnumRepr::Isize(v) => write!(f, "{v}n"),
+        }
+    }
+}
 
 pub fn gen_type(f: &mut impl Write, ident: String, kind: &CustomTypeKind) -> Result {
     match kind {
         CustomTypeKind::Unit(unit) => {
             write_doc_comments(f, &unit.doc)?;
 
-            write!(f, "export enum {ident} ")?;
+            write!(f, "export const {ident} = ")?;
             write_map(
                 f,
-                " =",
-                unit.fields.iter().map(|f| (&f.doc, &f.name, f.value)),
+                ":",
+                unit.fields
+                    .iter()
+                    .map(|f| (&f.doc, &f.name, EnumReprValue(f.value))),
             )?;
+            writeln!(f, "as const;")?;
+
+            let enum_type = match unit.fields.first().unwrap().value {
+                EnumRepr::U8(_)
+                | EnumRepr::U16(_)
+                | EnumRepr::U32(_)
+                | EnumRepr::I8(_)
+                | EnumRepr::I16(_)
+                | EnumRepr::I32(_) => "number",
+
+                EnumRepr::Usize(_) => "bigint",
+                EnumRepr::Isize(_) => "bigint",
+
+                EnumRepr::U64(_) => "bigint",
+                EnumRepr::I64(_) => "bigint",
+            };
+            writeln!(f, "export type {ident} = {enum_type};")?;
         }
         CustomTypeKind::Struct(data) => {
             write_doc_comments(f, &data.doc)?;
@@ -50,7 +73,10 @@ pub fn gen_type(f: &mut impl Write, ident: String, kind: &CustomTypeKind) -> Res
 
             writeln!(f, "export type {ident} =")?;
 
-            for EnumField { doc: _, name, kind } in &data.fields {
+            for EnumField {
+                doc: _, name, kind, ..
+            } in &data.fields
+            {
                 let fields = match kind {
                     EnumKind::Unit => String::new(),
                     EnumKind::Struct(dta) => join(
