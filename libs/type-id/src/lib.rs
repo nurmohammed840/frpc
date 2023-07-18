@@ -138,32 +138,34 @@ pub struct CustomType<Field> {
 }
 
 macro_rules! enum_repr {
-    [$($ty: ty => $var: ident)*] => {
+    [$($ty: tt)*] => {
         #[cfg_attr(feature = "hash", derive(Hash))]
         #[cfg_attr(feature = "debug", derive(Debug))]
         #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+        #[allow(non_camel_case_types)]
         #[derive(Clone, Copy)]
-        pub enum EnumRepr { $($var($ty)),* }
+        pub enum EnumRepr { $($ty($ty)),* }
         $(
             impl From<$ty> for EnumRepr {
                 fn from(v: $ty) -> Self {
-                    Self::$var(v)
+                    Self::$ty(v)
                 }
             }
         )*
     };
 }
+
 enum_repr! {
-    u8 => U8
-    u16 => U16
-    u32 => U32
-    u64 => U64
-    usize => Usize
-    i8 => I8
-    i16 => I16
-    i32 => I32
-    i64 => I64
-    isize => Isize
+    u8
+    u16
+    u32
+    u64
+    usize
+    i8
+    i16
+    i32
+    i64
+    isize
 }
 
 #[cfg_attr(feature = "hash", derive(Hash))]
@@ -260,22 +262,22 @@ impl<Field> CustomType<Field> {
 }
 
 impl UnitField {
-    pub fn new(doc: &str, name: &str, value: impl Into<EnumRepr>) -> Self {
+    pub fn new(doc: &str, name: &str, value: EnumRepr) -> Self {
         Self {
             doc: doc.to_string(),
             name: Ident(name.to_string()),
-            value: value.into(),
+            value,
         }
     }
 }
 
 impl EnumField {
-    pub fn new(doc: &str, name: &str, kind: EnumKind, index: Option<impl Into<EnumRepr>>) -> Self {
+    pub fn new(doc: &str, name: &str, index: Option<EnumRepr>, kind: EnumKind) -> Self {
         Self {
             doc: doc.to_string(),
             name: Ident(name.to_string()),
             kind,
-            index: index.map(|v| v.into()),
+            index,
         }
     }
 }

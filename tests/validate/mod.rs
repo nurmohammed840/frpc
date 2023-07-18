@@ -9,7 +9,7 @@ async fn r#get_data() -> DataType {
         // Empty typles
         ((), ((), ())),
         r#class { r#new: () },
-        r#enum::r#type,
+        r#enum::r#type(42),
     )
 }
 
@@ -22,9 +22,11 @@ struct r#class {
     r#new: (),
 }
 
+#[repr(u8)]
 #[derive(Message, PartialEq)]
 enum r#enum {
-    r#type,
+    r#type(u8) = 40 + 2,
+    type_II,
 }
 
 frpc::declare! {

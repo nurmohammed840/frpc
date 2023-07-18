@@ -1,6 +1,5 @@
 use std::fmt;
 
-// Todo: Use `&Vec<String>` instade of `&str`
 pub fn write_doc_comments(f: &mut impl fmt::Write, lines: &str) -> fmt::Result {
     if lines.is_empty() {
         return Ok(());

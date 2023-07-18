@@ -7,16 +7,24 @@ struct EnumReprValue(EnumRepr);
 impl Display for EnumReprValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result {
         match self.0 {
-            EnumRepr::U8(v) => write!(f, "{v}"),
-            EnumRepr::U16(v) => write!(f, "{v}"),
-            EnumRepr::U32(v) => write!(f, "{v}"),
-            EnumRepr::U64(v) => write!(f, "{v}n"),
-            EnumRepr::Usize(v) => write!(f, "{v}n"),
-            EnumRepr::I8(v) => write!(f, "{v}"),
-            EnumRepr::I16(v) => write!(f, "{v}"),
-            EnumRepr::I32(v) => write!(f, "{v}"),
-            EnumRepr::I64(v) => write!(f, "{v}n"),
-            EnumRepr::Isize(v) => write!(f, "{v}n"),
+            EnumRepr::u8(v) => write!(f, "{v}"),
+            EnumRepr::u16(v) => write!(f, "{v}"),
+            EnumRepr::u32(v) => write!(f, "{v}"),
+            EnumRepr::i8(v) => write!(f, "{v}"),
+            EnumRepr::i16(v) => write!(f, "{v}"),
+            EnumRepr::i32(v) => write!(f, "{v}"),
+
+            EnumRepr::u64(v) => write!(f, "{v}n"),
+            EnumRepr::i64(v) => write!(f, "{v}n"),
+
+            EnumRepr::usize(v) => match u64::BITS {
+                64 => write!(f, "{v}n"),
+                _ => write!(f, "{v}"),
+            },
+            EnumRepr::isize(v) => match i64::BITS {
+                64 => write!(f, "{v}n"),
+                _ => write!(f, "{v}"),
+            },
         }
     }
 }
@@ -37,18 +45,15 @@ pub fn gen_type(f: &mut impl Write, ident: String, kind: &CustomTypeKind) -> Res
             writeln!(f, "as const;")?;
 
             let enum_type = match unit.fields.first().unwrap().value {
-                EnumRepr::U8(_)
-                | EnumRepr::U16(_)
-                | EnumRepr::U32(_)
-                | EnumRepr::I8(_)
-                | EnumRepr::I16(_)
-                | EnumRepr::I32(_) => "number",
+                EnumRepr::u8(_)
+                | EnumRepr::u16(_)
+                | EnumRepr::u32(_)
+                | EnumRepr::i8(_)
+                | EnumRepr::i16(_)
+                | EnumRepr::i32(_) => "number",
 
-                EnumRepr::Usize(_) => "bigint",
-                EnumRepr::Isize(_) => "bigint",
-
-                EnumRepr::U64(_) => "bigint",
-                EnumRepr::I64(_) => "bigint",
+                EnumRepr::isize(_) | EnumRepr::usize(_) if usize::BITS <= 32 => "number",
+                _ => "bigint",
             };
             writeln!(f, "export type {ident} = {enum_type};")?;
         }

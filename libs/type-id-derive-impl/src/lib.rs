@@ -8,7 +8,13 @@ use syn::{
     *,
 };
 
-pub fn expand(crate_path: impl IntoTokens, input: &DeriveInput, output: &mut TokenStream) {
+pub fn expand(
+    crate_path: impl IntoTokens,
+    input: &DeriveInput,
+    output: &mut TokenStream,
+    is_unit_enum: bool,
+    enum_repr: Option<&String>,
+) {
     let DeriveInput {
         attrs,
         ident,
@@ -41,25 +47,28 @@ pub fn expand(crate_path: impl IntoTokens, input: &DeriveInput, output: &mut Tok
             Fields::Unit => panic!("`{ident}` struct needs at most one field"),
         },
         Data::Enum(data) => {
-            let is_unit = data
-                .variants
-                .iter()
-                .all(|v| v.discriminant.is_some() || matches!(v.fields, Fields::Unit));
-
             let variants = data
                 .variants
                 .iter()
                 .map(|v| (get_comments_from(&v.attrs), v.ident.to_string(), v));
 
-            if is_unit {
-                let mut value: isize = -1;
+            let mut discriminator = Discriminator::new();
+
+            if is_unit_enum {
+                let repr = match enum_repr {
+                    Some(repr) => repr,
+                    None => "isize",
+                };
                 for (doc, name, v) in variants {
-                    value = match &v.discriminant {
-                        Some((_, expr)) => parse_int(expr),
-                        None => value + 1,
-                    };
+                    let index = quote(|o| {
+                        let index = discriminator.get(&v.discriminant);
+                        let repr = Ident::new(repr, Span::call_site());
+                        quote!(o, {
+                            __crate::EnumRepr::#repr(#index),
+                        });
+                    });
                     quote!(body, {
-                        __crate::UnitField::new(#doc, #name, #value),
+                        __crate::UnitField::new(#doc, #name, #index),
                     });
                 }
                 "Unit"
@@ -78,8 +87,22 @@ pub fn expand(crate_path: impl IntoTokens, input: &DeriveInput, output: &mut Tok
                             quote!(o, { Unit });
                         }
                     });
+                    let index = quote(|o| {
+                        match enum_repr {
+                            Some(repr) => {
+                                let index = discriminator.get(&v.discriminant);
+                                let repr = Ident::new(repr, Span::call_site());
+                                quote!(o, {
+                                    Some(__crate::EnumRepr::#repr(#index))
+                                });
+                            }
+                            None => {
+                                quote!(o, { None });
+                            }
+                        };
+                    });
                     quote!(body, {
-                        __crate::EnumField::new(#doc, #name, __crate::EnumKind::#kind),
+                        __crate::EnumField::new(#doc, #name, #index, __crate::EnumKind::#kind),
                     });
                 }
                 "Enum"
@@ -129,16 +152,6 @@ fn to_object(body: &mut TokenStream, fields: &FieldsNamed) {
     }
 }
 
-fn parse_int(expr: &Expr) -> isize {
-    match expr {
-        Expr::Lit(expr_lit) => match &expr_lit.lit {
-            Lit::Int(int) => int.base10_parse().unwrap(),
-            _ => panic!("Expect integer"),
-        },
-        _ => panic!("Not a number"),
-    }
-}
-
 fn get_comments_from(attrs: &Vec<Attribute>) -> String {
     let mut string = String::new();
     for attr in attrs {
@@ -154,4 +167,40 @@ fn get_comments_from(attrs: &Vec<Attribute>) -> String {
         }
     }
     string
+}
+
+struct Discriminator {
+    discriminant: Index,
+    expr: Option<Expr>,
+}
+
+impl Discriminator {
+    fn new() -> Self {
+        Self {
+            discriminant: Index::from(0),
+            expr: None,
+        }
+    }
+
+    fn get<'a>(
+        &'a mut self,
+        discriminant: &'a Option<(Token!(=), Expr)>,
+    ) -> Token<impl FnOnce(&mut TokenStream) + 'a> {
+        quote(move |o| match discriminant {
+            Some((_, expr)) => {
+                self.discriminant.index = 1;
+                self.expr = Some(expr.clone());
+                quote!(o, { #expr });
+            }
+            None => {
+                let index = &self.discriminant;
+                if let Some(expr) = &self.expr {
+                    quote!(o, { #expr + #index });
+                } else {
+                    quote!(o, { #index });
+                }
+                self.discriminant.index += 1;
+            }
+        })
+    }
 }
