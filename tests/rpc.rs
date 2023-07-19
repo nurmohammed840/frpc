@@ -1,5 +1,6 @@
 //! cargo test --test rpc
 //! cargo test --test rpc <serve | codegen>
+mod cancellation;
 mod echo;
 mod sse;
 mod validate;
@@ -16,6 +17,7 @@ use std::{
 };
 use tokio::task;
 
+use cancellation::Cancellation;
 use echo::{Context, EchoTest};
 use sse::SSETest;
 use validate::ValidateTest;
@@ -32,7 +34,12 @@ fn codegen() {
             preserve_import_extension: true,
         }),
     }
-    .generate_binding(&[&EchoTest.into(), &ValidateTest.into(), &SSETest.into()])
+    .generate_binding(&[
+        &EchoTest.into(),
+        &ValidateTest.into(),
+        &SSETest.into(),
+        &Cancellation.into(),
+    ])
     .expect("Failed to generate binding");
 
     println!("Codegen finished in {:?}\n", time.elapsed());
@@ -66,6 +73,7 @@ async fn main() -> Result<()> {
                     "/rpc/validate" => ctx.serve(&CONF, (), ValidateTest::execute).await,
                     "/rpc/echo" => ctx.serve(&CONF, state, EchoTest::execute).await,
                     "/rpc/sse" => ctx.serve(&CONF, (), SSETest::execute).await,
+                    "/rpc/cancellation" => ctx.serve(&CONF, (), Cancellation::execute).await,
                     _ => return,
                 };
             },
@@ -90,6 +98,7 @@ fn run_clients() -> Result<()> {
     run_js("./tests/echo/mod.ts")?;
     run_js("./tests/validate/mod.ts")?;
     run_js("./tests/sse/mod.ts")?;
+    run_js("./tests/cancellation/mod.ts")?;
     Ok(())
 }
 

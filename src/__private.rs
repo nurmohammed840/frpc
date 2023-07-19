@@ -15,7 +15,9 @@ where
     Args: TypeId,
     F::Output: OutputType,
 {
-    let Ty::Tuple(mut args) = Args::ty(costom_types) else { unreachable!() };
+    let Ty::Tuple(mut args) = Args::ty(costom_types) else {
+        unreachable!()
+    };
     if let Some(ty) = args.first() {
         if ty.is_empty_tuple() {
             args.remove(0);

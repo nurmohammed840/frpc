@@ -50,13 +50,17 @@ impl<'req, 'res> Ctx<'req, 'res> {
     ) -> StatusCode {
         match self.req.headers.get("content-length") {
             Some(len) => {
-                let Ok(Ok(len)) = len.to_str().map(str::parse::<u32>) else { return StatusCode::BAD_REQUEST };
+                let Ok(Ok(len)) = len.to_str().map(str::parse::<u32>) else {
+                    return StatusCode::BAD_REQUEST;
+                };
                 if len > conf.max_unary_payload_size {
                     return StatusCode::PAYLOAD_TOO_LARGE;
                 }
                 let mut buf = Vec::with_capacity(len as usize);
                 while let Some(bytes) = self.req.data().await {
-                    let Ok(bytes) = bytes else { return StatusCode::PARTIAL_CONTENT; };
+                    let Ok(bytes) = bytes else {
+                        return StatusCode::PARTIAL_CONTENT;
+                    };
                     buf.extend_from_slice(&bytes);
                     if buf.len() > len as usize {
                         return StatusCode::PARTIAL_CONTENT;
@@ -70,7 +74,9 @@ impl<'req, 'res> Ctx<'req, 'res> {
 
                 let mut transport = RpcResponder(self.res);
                 let mut cursor = data;
-                let Some(fut) = executor(state, id, &mut cursor, &mut transport) else { return StatusCode::NOT_FOUND };
+                let Some(fut) = executor(state, id, &mut cursor, &mut transport) else {
+                    return StatusCode::NOT_FOUND;
+                };
                 fut.await;
                 StatusCode::OK
             }
@@ -113,22 +119,31 @@ impl Transport for RpcResponder<'_> {
         Box::pin(async move {
             let mut response = http::Response::new(());
             *response.headers_mut() = mem::take(&mut self.0.headers);
+
             let mut buf = vec![];
-            match poll_fn(|cx| poll(cx, &mut buf)).await {
-                Ok(_) => {
-                    let is_empty = buf.is_empty();
-                    if let Ok(stream) = self.0.sender.send_response(response, is_empty) {
-                        if !is_empty {
-                            let _ = h2x::Responder { inner: stream }
-                                .write_bytes(buf.into(), true)
-                                .await;
+
+            if let Some(output) = poll_fn(|cx| match self.0.sender.poll_reset(cx) {
+                Poll::Ready(_reset_reason) => Poll::Ready(None),
+                Poll::Pending => poll(cx, &mut buf).map(Some),
+            })
+            .await
+            {
+                match output {
+                    Ok(()) => {
+                        let is_empty = buf.is_empty();
+                        if let Ok(stream) = self.0.sender.send_response(response, is_empty) {
+                            if !is_empty {
+                                let _ = h2x::Responder { inner: stream }
+                                    .write_bytes(buf.into(), true)
+                                    .await;
+                            }
                         }
                     }
-                }
-                Err(_parse_err) => {
-                    // dbg!(_parse_err);
-                    *response.status_mut() = StatusCode::NOT_ACCEPTABLE;
-                    let _ = self.0.sender.send_response(response, true);
+                    Err(_parse_err) => {
+                        // dbg!(_parse_err);
+                        *response.status_mut() = StatusCode::NOT_ACCEPTABLE;
+                        let _ = self.0.sender.send_response(response, true);
+                    }
                 }
             }
         })
@@ -148,7 +163,9 @@ impl Transport for RpcResponder<'_> {
             let mut response = http::Response::new(());
             *response.headers_mut() = mem::take(&mut self.0.headers);
 
-            let Ok(inner) = self.0.sender.send_response(response, false) else { return };
+            let Ok(inner) = self.0.sender.send_response(response, false) else {
+                return;
+            };
 
             let mut stream = h2x::Responder { inner };
             let mut buf = vec![0; 4];
