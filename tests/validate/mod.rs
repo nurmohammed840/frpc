@@ -22,7 +22,7 @@ struct r#class {
     r#new: (),
 }
 
-#[repr(u8)]
+#[repr(i8)]
 #[derive(Message, PartialEq)]
 enum r#enum {
     r#type(u8) = 40 + 2,

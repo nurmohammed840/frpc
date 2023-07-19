@@ -1,3 +1,5 @@
+use crate::typescript::interface::EnumReprValue;
+
 use super::*;
 
 pub fn main(f: &mut impl Write, provider: &CodeGen) -> Result {
@@ -10,15 +12,26 @@ pub fn main(f: &mut impl Write, provider: &CodeGen) -> Result {
         match &provider.type_def.costom_types[*path] {
             CustomTypeKind::Unit(data) => {
                 writeln!(f, "switch (z) {{")?;
-                for (i, UnitField { name, .. }) in data.fields.iter().enumerate() {
-                    writeln!(f, "case {ident}.{name}: return d.len_u15({i});")?;
+                for UnitField { name, value, .. } in data.fields.iter() {
+                    let index = EnumReprValue(*value);
+                    let repr_ty = enum_repr_ty(value);
+                    writeln!(f, "case {ident}.{name}: return d.{repr_ty}({index});")?;
                 }
                 writeln!(f, "}}")?;
             }
             CustomTypeKind::Enum(data) => {
+                let mut i = EnumFieldIndex(0);
                 writeln!(f, "switch (z.type) {{")?;
-                for (i, EnumField { name, kind, .. }) in data.fields.iter().enumerate() {
-                    writeln!(f, "case {name:?}: d.len_u15({i});")?;
+                for EnumField {
+                    name, kind, index, ..
+                } in data.fields.iter()
+                {
+                    let repr_ty = match index {
+                        Some(value) => enum_repr_ty(value).to_string(),
+                        None => String::from("len_u15"),
+                    };
+                    let index = i.get(index);
+                    writeln!(f, "case {name:?}: d.{repr_ty}({index});")?;
                     match kind {
                         EnumKind::Struct(fields) => write_struct(f, fields)?,
                         EnumKind::Tuple(fields) => {

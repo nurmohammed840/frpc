@@ -82,6 +82,36 @@ fn fmt_ty<'a>(ty: &'a Ty, scope: &'a str) -> fmt!(type 'a) {
     })
 }
 
+struct EnumFieldIndex(pub u32);
+
+impl EnumFieldIndex {
+    fn get(&mut self, index: &Option<EnumRepr>) -> String {
+        match index {
+            Some(value) => super::interface::EnumReprValue(*value).to_string(),
+            None => {
+                let index = self.0.to_string();
+                self.0 += 1;
+                index
+            }
+        }
+    }
+}
+
+fn enum_repr_ty(enum_repr: &EnumRepr) -> fmt!(type '_) {
+    Fmt(move |f| match enum_repr {
+        EnumRepr::u8(_) => f.write_str("u8"),
+        EnumRepr::i8(_) => f.write_str("i8"),
+        EnumRepr::u16(_) => f.write_str("num('U', 16)"),
+        EnumRepr::u32(_) => f.write_str("num('U', 32)"),
+        EnumRepr::u64(_) => f.write_str("num('U', 64)"),
+        EnumRepr::i16(_) => f.write_str("num('I', 16)"),
+        EnumRepr::i32(_) => f.write_str("num('I', 32)"),
+        EnumRepr::i64(_) => f.write_str("num('I', 64)"),
+        EnumRepr::usize(_) => write!(f, "num('U', {})", usize::BITS),
+        EnumRepr::isize(_) => write!(f, "num('I', {})", isize::BITS),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,5 +1,5 @@
 use super::*;
-use crate::utils::write_doc_comments;
+use crate::{typescript::interface::EnumReprValue, utils::write_doc_comments};
 
 pub fn main(f: &mut impl Write, provider: &CodeGen) -> Result {
     writeln!(f, "let struct = {{")?;
@@ -12,18 +12,24 @@ pub fn main(f: &mut impl Write, provider: &CodeGen) -> Result {
                 let items = Fmt(|f| {
                     data.fields
                         .iter()
-                        .enumerate()
-                        .try_for_each(|(i, UnitField { name, .. })| {
-                            writeln!(f, "case {i}: return {ident}.{name};")
+                        .try_for_each(|UnitField { name, value, .. }| {
+                            let index = EnumReprValue(*value);
+                            writeln!(f, "case {index}: return {ident}.{name};")
                         })
                 });
+                let repr_ty = enum_repr_ty(data.enum_repr());
+                writeln!(f, "const num = d.{repr_ty}();")?;
                 write_enum(f, &ident, items)?;
             }
             CustomTypeKind::Enum(data) => {
                 let items = Fmt(|f| {
-                    data.fields.iter().enumerate().try_for_each(
-                        |(i, EnumField { name, kind, .. })| {
-                            writeln!(f, "case {i}: return {{\ntype: {name:?},")?;
+                    let mut i = EnumFieldIndex(0);
+                    data.fields.iter().try_for_each(
+                        |EnumField {
+                             name, kind, index, ..
+                         }| {
+                            let index = i.get(index);
+                            writeln!(f, "case {index}: return {{\ntype: {name:?},")?;
                             match kind {
                                 EnumKind::Struct(fields) => write_struct(f, fields)?,
                                 EnumKind::Tuple(fields) => {
@@ -38,12 +44,16 @@ pub fn main(f: &mut impl Write, provider: &CodeGen) -> Result {
                         },
                     )
                 });
+                match data.enum_repr() {
+                    None => f.write_str("const num = d.len_u15();\n"),
+                    Some(repr) => writeln!(f, "const num = d.{}();", enum_repr_ty(repr)),
+                }?;
                 write_enum(f, &ident, items)?;
             }
             CustomTypeKind::Struct(data) => {
-                writeln!(f, "return {{")?;
+                f.write_str("return {\n")?;
                 write_struct(f, &data.fields)?;
-                writeln!(f, "}}")?
+                f.write_str("}\n")?;
             }
             CustomTypeKind::Tuple(data) => {
                 writeln!(f, "return {}();", fmt_tuple(&data.fields, "struct"))?;
@@ -62,5 +72,8 @@ fn write_struct(f: &mut impl Write, fields: &[StructField]) -> Result {
 }
 
 fn write_enum(f: &mut impl Write, ident: &String, items: fmt!(type)) -> Result {
-    writeln!(f, "const num = d.len_u15();\nswitch (num) {{\n{items}default: throw use.enumErr({ident:?}, num);\n}}")
+    writeln!(
+        f,
+        "switch (num) {{\n{items}default: throw use.enumErr({ident:?}, num);\n}}"
+    )
 }

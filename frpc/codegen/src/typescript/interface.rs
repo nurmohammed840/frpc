@@ -2,29 +2,16 @@ use crate::utils::{join, object_ident_from, write_doc_comments};
 use frpc_message::*;
 use std::fmt::{Display, Result, Write};
 
-struct EnumReprValue(EnumRepr);
+pub(super) struct EnumReprValue(pub EnumRepr);
 
 impl Display for EnumReprValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result {
         match self.0 {
-            EnumRepr::u8(v) => write!(f, "{v}"),
-            EnumRepr::u16(v) => write!(f, "{v}"),
-            EnumRepr::u32(v) => write!(f, "{v}"),
-            EnumRepr::i8(v) => write!(f, "{v}"),
-            EnumRepr::i16(v) => write!(f, "{v}"),
-            EnumRepr::i32(v) => write!(f, "{v}"),
-
             EnumRepr::u64(v) => write!(f, "{v}n"),
             EnumRepr::i64(v) => write!(f, "{v}n"),
-
-            EnumRepr::usize(v) => match u64::BITS {
-                64 => write!(f, "{v}n"),
-                _ => write!(f, "{v}"),
-            },
-            EnumRepr::isize(v) => match i64::BITS {
-                64 => write!(f, "{v}n"),
-                _ => write!(f, "{v}"),
-            },
+            EnumRepr::usize(v) if usize::BITS >= 64 => write!(f, "{v}n"),
+            EnumRepr::isize(v) if isize::BITS >= 64 => write!(f, "{v}n"),
+            num => num.fmt(f),
         }
     }
 }
@@ -42,8 +29,6 @@ pub fn gen_type(f: &mut impl Write, ident: String, kind: &CustomTypeKind) -> Res
                     .iter()
                     .map(|f| (&f.doc, &f.name, EnumReprValue(f.value))),
             )?;
-            writeln!(f, "as const;")?;
-
             let enum_type = match unit.fields.first().unwrap().value {
                 EnumRepr::u8(_)
                 | EnumRepr::u16(_)

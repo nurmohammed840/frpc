@@ -40,7 +40,7 @@ export function assertEq<T>(actual: T, expected: T) {
 	}
 }
 
-export function enumErr(ident: string, num: number) {
+export function enumErr<T>(ident: string, num: T) {
 	return new Error(`unknown ${num} discriminator of ${ident}`)
 }
 

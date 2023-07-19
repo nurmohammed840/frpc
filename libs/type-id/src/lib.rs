@@ -137,6 +137,18 @@ pub struct CustomType<Field> {
     pub fields: Vec<Field>,
 }
 
+impl CustomType<UnitField> {
+    pub fn enum_repr(&self) -> &EnumRepr {
+        &self.fields.first().unwrap().value
+    }
+}
+
+impl CustomType<EnumField> {
+    pub fn enum_repr(&self) -> Option<&EnumRepr> {
+        self.fields.first().unwrap().index.as_ref()
+    }
+}
+
 macro_rules! enum_repr {
     [$($ty: tt)*] => {
         #[cfg_attr(feature = "hash", derive(Hash))]
@@ -152,6 +164,13 @@ macro_rules! enum_repr {
                 }
             }
         )*
+        impl fmt::Display for EnumRepr {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                match self {
+                    $(Self::$ty(v) => v.fmt(f)),*
+                }
+            }
+        }
     };
 }
 
