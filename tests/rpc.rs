@@ -10,15 +10,13 @@ use std::{
     collections::HashSet,
     fs,
     io::Result,
-    ops::ControlFlow,
     process::{Command, Output, Stdio},
-    sync::Arc,
     time::Instant,
 };
 use tokio::task;
 
 use cancellation::Cancellation;
-use echo::{Context, EchoTest};
+use echo::EchoTest;
 use sse::SSETest;
 use validate::ValidateTest;
 
@@ -55,42 +53,50 @@ async fn main() -> Result<()> {
         return Ok(());
     }
 
-    let addr = "127.0.0.1:4433";
     let cert = fs::read("examples/cert.pem")?;
     let key = fs::read("examples/key.pem")?;
-
-    let (server, recv_close_signal) = Server::bind(addr, &mut &*cert, &mut &*key)
+    let server = Server::bind("127.0.0.1:4433", &mut &*cert, &mut &*key)
         .await
         .unwrap()
-        .serve_with_graceful_shutdown(
-            |_| async { ControlFlow::Continue(Some(Arc::new(Context::default()))) },
-            |_conn, state, mut req, mut res| async move {
-                res.headers
-                    .append("access-control-allow-origin", HeaderValue::from_static("*"));
+        .with_graceful_shutdown();
 
-                let mut ctx = Ctx::new(&mut req, &mut res);
-                let _ = match ctx.req.uri.path() {
-                    "/rpc/validate" => ctx.serve(&CONF, (), ValidateTest::execute).await,
-                    "/rpc/echo" => ctx.serve(&CONF, state, EchoTest::execute).await,
-                    "/rpc/sse" => ctx.serve(&CONF, (), SSETest::execute).await,
-                    "/rpc/cancellation" => ctx.serve(&CONF, (), Cancellation::execute).await,
-                    _ => return,
-                };
-            },
-            |_| async {},
-        );
+    let serve = async {
+        loop {
+            if let Ok((conn, _addr)) = server.accept().await {
+                conn.incoming(
+                    Default::default(),
+                    |_conn, state, mut req, mut res| async move {
+                        res.headers
+                            .append("access-control-allow-origin", HeaderValue::from_static("*"));
+
+                        let mut ctx = Ctx::new(&mut req, &mut res);
+                        let _ = match ctx.req.uri.path() {
+                            "/rpc/validate" => ctx.serve(&CONF, (), ValidateTest::execute).await,
+                            "/rpc/echo" => ctx.serve(&CONF, state, EchoTest::execute).await,
+                            "/rpc/sse" => ctx.serve(&CONF, (), SSETest::execute).await,
+                            "/rpc/cancellation" => {
+                                ctx.serve(&CONF, (), Cancellation::execute).await
+                            }
+                            _ => return,
+                        };
+                    },
+                    |_| async {},
+                )
+            }
+        }
+    };
 
     if args.contains("serve") {
         println!("Server runing...");
-        println!("Goto: https://{addr}");
-        server.await;
+        println!("Goto: https://127.0.0.1:4433/");
+        serve.await;
     } else {
         tokio::select! {
             output = task::spawn_blocking(run_clients) => output??,
-            _ = server => {},
+            _ = serve => {},
         }
     }
-    recv_close_signal.await;
+    server.shutdown().await;
     Ok(())
 }
 
