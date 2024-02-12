@@ -1,4 +1,5 @@
 use std::{
+    // future::Future,
     io::{self, Result},
     task::{Context, Poll},
 };
@@ -34,3 +35,20 @@ pub trait Transport {
             &'buf mut dyn io::Write,
         ) -> Poll<Result<bool>>;
 }
+
+// pub trait TransportV2 {
+//     fn unary_sync(
+//         &mut self,
+//         cb: impl FnOnce(&mut dyn io::Write) -> Result<()> + Send,
+//     ) -> impl Future<Output = ()> + Send;
+
+//     fn unary(
+//         &mut self,
+//         poll: impl FnMut(&mut Context, &mut dyn io::Write) -> Poll<Result<()>> + Send,
+//     ) -> impl Future<Output = ()> + Send;
+
+//     fn server_stream(
+//         &mut self,
+//         poll: impl FnMut(&mut Context, &mut dyn io::Write) -> Poll<Result<bool>> + Send,
+//     ) -> impl Future<Output = ()> + Send;
+// }

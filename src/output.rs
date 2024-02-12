@@ -108,7 +108,7 @@ where
 ///
 /// Another adventage is that is will make function arguments parsing lazy,
 /// If transport layer has any error, Which in result the future will never get polled.
-enum FutState<'cursor, 'data, Func, State, Args, Fut>
+enum GetFut<'cursor, 'data, Func, State, Args, Fut>
 where
     Func: std_lib::FnOnce<Args, Output = Fut>,
 {
@@ -122,13 +122,13 @@ where
     Done,
 }
 
-impl<'cursor, 'data, Func, State, Args, Fut> FutState<'cursor, 'data, Func, State, Args, Fut>
+impl<'cursor, 'data, Func, State, Args, Fut> GetFut<'cursor, 'data, Func, State, Args, Fut>
 where
     Func: std_lib::FnOnce<Args, Output = Fut>,
     Args: input::Input<'data, State>,
 {
     fn new(func: Func, state: State, cursor: &'cursor mut &'data [u8]) -> Self {
-        FutState::Init {
+        GetFut::Init {
             func,
             state,
             cursor,
@@ -139,8 +139,8 @@ where
     fn poll<T>(&mut self, cb: impl FnOnce(&mut Fut) -> Poll<Result<T>>) -> Poll<Result<T>> {
         loop {
             match self {
-                FutState::Init { .. } => match std::mem::replace(self, FutState::Done) {
-                    FutState::Init {
+                GetFut::Init { .. } => match std::mem::replace(self, GetFut::Done) {
+                    GetFut::Init {
                         state,
                         cursor,
                         func,
@@ -148,7 +148,7 @@ where
                     } => match Args::decode(state, cursor) {
                         // This is the only place where we move this future.
                         // From now on we promise we will never move it again!
-                        Ok(args) => *self = FutState::Poll(func.call_once(args)),
+                        Ok(args) => *self = GetFut::Poll(func.call_once(args)),
                         Err(err) => {
                             return Poll::Ready(Err(io::Error::new(
                                 io::ErrorKind::InvalidInput,
@@ -158,8 +158,8 @@ where
                     },
                     _ => unsafe { std::hint::unreachable_unchecked() },
                 },
-                FutState::Poll(ref mut fut) => return cb(fut),
-                FutState::Done => panic!("`Output::produce` polled after completion"),
+                GetFut::Poll(ref mut fut) => return cb(fut),
+                GetFut::Done => panic!("`Output::produce` polled after completion"),
             }
         }
     }
@@ -184,12 +184,12 @@ where
         State: 'fut + Send,
         Args: 'fut + input::Input<'data, State> + Send,
     {
-        let mut fut_state = FutState::new(func, state, cursor);
+        let mut get_fut = GetFut::new(func, state, cursor);
         transport.unary(move |cx, buf| {
-            fut_state.poll(|fut| {
+            get_fut.poll(|fut| {
                 unsafe { Pin::new_unchecked(fut) }
                     .poll(cx)
-                    .map(|data| Encode::encode::<{ crate::DATABUF_CONFIG }>(&data, buf))
+                    .map(|ret| Encode::encode::<{ crate::DATABUF_CONFIG }>(&ret, buf))
             })
         })
     }
@@ -213,9 +213,9 @@ where
         State: 'fut + Send,
         Args: 'fut + input::Input<'data, State> + Send,
     {
-        let mut fut_state = FutState::new(func, state, cursor);
+        let mut get_fut = GetFut::new(func, state, cursor);
         transport.server_stream(move |cx, buf| {
-            fut_state.poll(|this| {
+            get_fut.poll(|this| {
                 unsafe { Pin::new_unchecked(&mut this.0) }
                     .poll_resume(cx)
                     .map(|gen_state| match gen_state {
