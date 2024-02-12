@@ -1,4 +1,4 @@
-use frpc::{async_gen::futures_core::future::BoxFuture, databuf::Decode, Return};
+use frpc::{databuf::Decode, Return};
 use std::{io::Write, time::Instant};
 
 const ITER: u32 = 10000000;
@@ -61,38 +61,32 @@ async fn rpc() -> Vec<u8> {
 struct DummyTransport(Vec<u8>);
 
 impl frpc::Transport for DummyTransport {
-    fn unary_sync<'this, 'fut, CB>(&'this mut self, cb: CB) -> BoxFuture<'fut, ()>
-    where
-        'this: 'fut,
-        Self: 'fut,
-        CB: for<'buf> FnOnce(&'buf mut dyn std::io::Write) -> std::io::Result<()> + Send + 'fut,
-    {
-        Box::pin(async { cb(&mut self.0).unwrap() })
+    async fn unary_sync(
+        &mut self,
+        cb: impl FnOnce(&mut dyn std::io::Write) -> std::io::Result<()> + Send,
+    ) {
+        cb(&mut self.0).unwrap()
     }
 
-    fn unary<'this, 'fut, P>(&'this mut self, _poll: P) -> BoxFuture<'fut, ()>
-    where
-        'this: 'fut,
-        Self: 'fut,
-        P: Send + 'fut,
-        P: for<'cx, 'w, 'buf> FnMut(
-            &'cx mut std::task::Context<'w>,
-            &'buf mut dyn std::io::Write,
-        ) -> std::task::Poll<std::io::Result<()>>,
-    {
+    async fn unary(
+        &mut self,
+        _poll: impl FnMut(
+                &mut std::task::Context,
+                &mut dyn std::io::Write,
+            ) -> std::task::Poll<std::io::Result<()>>
+            + Send,
+    ) {
         todo!()
     }
 
-    fn server_stream<'this, 'fut, P>(&'this mut self, _poll: P) -> BoxFuture<'fut, ()>
-    where
-        'this: 'fut,
-        Self: 'fut,
-        P: Send + 'fut,
-        P: for<'cx, 'w, 'buf> FnMut(
-            &'cx mut std::task::Context<'w>,
-            &'buf mut dyn std::io::Write,
-        ) -> std::task::Poll<std::io::Result<bool>>,
-    {
+    async fn server_stream(
+        &mut self,
+        _poll: impl FnMut(
+                &mut std::task::Context,
+                &mut dyn std::io::Write,
+            ) -> std::task::Poll<std::io::Result<bool>>
+            + Send,
+    ) {
         todo!()
     }
 }

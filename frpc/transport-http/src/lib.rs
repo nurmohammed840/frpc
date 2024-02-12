@@ -91,12 +91,7 @@ impl<'req, 'res> Ctx<'req, 'res> {
 pub struct RpcResponder<'a>(&'a mut Response);
 
 impl Transport for RpcResponder<'_> {
-    fn unary_sync<'this, 'fut, CB>(&'this mut self, cb: CB) -> BoxFuture<'fut, ()>
-    where
-        'this: 'fut,
-        Self: 'fut,
-        CB: for<'buf> FnOnce(&'buf mut dyn io::Write) -> io::Result<()> + Send + 'fut,
-    {
+    async fn unary_sync(&mut self, cb: impl FnOnce(&mut dyn io::Write) -> io::Result<()> + Send) {
         let mut cb = Some(cb);
         self.unary(move |_, buf| {
             Poll::Ready(match cb.take() {
@@ -104,99 +99,84 @@ impl Transport for RpcResponder<'_> {
                 None => unreachable!(),
             })
         })
+        .await
     }
 
-    fn unary<'this, 'fut, P>(&'this mut self, mut poll: P) -> BoxFuture<'fut, ()>
-    where
-        'this: 'fut,
-        Self: 'fut,
-        P: Send + 'fut,
-        P: for<'cx, 'w, 'buf> FnMut(
-            &'cx mut Context<'w>,
-            &'buf mut dyn io::Write,
-        ) -> Poll<io::Result<()>>,
-    {
-        Box::pin(async move {
-            let mut response = http::Response::new(());
-            *response.headers_mut() = mem::take(&mut self.0.headers);
+    async fn unary(
+        &mut self,
+        mut poll: impl FnMut(&mut Context, &mut dyn io::Write) -> Poll<io::Result<()>> + Send,
+    ) {
+        let mut response = http::Response::new(());
+        *response.headers_mut() = mem::take(&mut self.0.headers);
 
-            let mut buf = vec![];
+        let mut buf = vec![];
 
-            if let Some(output) = poll_fn(|cx| match self.0.sender.poll_reset(cx) {
-                Poll::Ready(_reset_reason) => Poll::Ready(None),
-                Poll::Pending => poll(cx, &mut buf).map(Some),
-            })
-            .await
-            {
-                match output {
-                    Ok(()) => {
-                        let is_empty = buf.is_empty();
-                        if let Ok(stream) = self.0.sender.send_response(response, is_empty) {
-                            if !is_empty {
-                                let _ = h2x::Responder { inner: stream }
-                                    .write_bytes(buf.into(), true)
-                                    .await;
-                            }
+        if let Some(output) = poll_fn(|cx| match self.0.sender.poll_reset(cx) {
+            Poll::Ready(_reset_reason) => Poll::Ready(None),
+            Poll::Pending => poll(cx, &mut buf).map(Some),
+        })
+        .await
+        {
+            match output {
+                Ok(()) => {
+                    let is_empty = buf.is_empty();
+                    if let Ok(stream) = self.0.sender.send_response(response, is_empty) {
+                        if !is_empty {
+                            let _ = h2x::Responder { inner: stream }
+                                .write_bytes(buf.into(), true)
+                                .await;
                         }
                     }
-                    Err(_parse_err) => {
-                        // dbg!(_parse_err);
-                        *response.status_mut() = StatusCode::NOT_ACCEPTABLE;
-                        let _ = self.0.sender.send_response(response, true);
-                    }
+                }
+                Err(_parse_err) => {
+                    // dbg!(_parse_err);
+                    *response.status_mut() = StatusCode::NOT_ACCEPTABLE;
+                    let _ = self.0.sender.send_response(response, true);
                 }
             }
-        })
+        }
     }
 
-    fn server_stream<'this, 'fut, P>(&'this mut self, mut poll: P) -> BoxFuture<'fut, ()>
-    where
-        'this: 'fut,
-        Self: 'fut,
-        P: Send + 'fut,
-        P: for<'cx, 'w, 'buf> FnMut(
-            &'cx mut Context<'w>,
-            &'buf mut dyn io::Write,
-        ) -> Poll<io::Result<bool>>,
-    {
-        Box::pin(async move {
-            let mut response = http::Response::new(());
-            *response.headers_mut() = mem::take(&mut self.0.headers);
+    async fn server_stream(
+        &mut self,
+        mut poll: impl FnMut(&mut Context, &mut dyn io::Write) -> Poll<io::Result<bool>> + Send,
+    ) {
+        let mut response = http::Response::new(());
+        *response.headers_mut() = mem::take(&mut self.0.headers);
 
-            let Ok(inner) = self.0.sender.send_response(response, false) else {
-                return;
-            };
+        let Ok(inner) = self.0.sender.send_response(response, false) else {
+            return;
+        };
 
-            let mut stream = h2x::Responder { inner };
-            let mut buf = vec![0; 4];
+        let mut stream = h2x::Responder { inner };
+        let mut buf = vec![0; 4];
 
-            while let Ok(done) = poll_fn(|cx| poll(cx, &mut buf)).await {
-                let len = buf.len() - 4;
-                if len >= (1 << 31) {
-                    break;
-                }
-                unsafe {
-                    let len = (len as u32).to_le_bytes();
-                    // SAFETY: `buf` is valid for `4` bytes.
-                    ptr::copy_nonoverlapping(len.as_ptr(), buf.as_mut_ptr(), 4);
-                }
-                match done {
-                    false => {
-                        if len == 0 {
-                            continue;
-                        }
-                        let bytes = std::mem::replace(&mut buf, vec![0; 4]);
-                        if stream.write_bytes(bytes.into(), false).await.is_err() {
-                            break;
-                        }
+        while let Ok(done) = poll_fn(|cx| poll(cx, &mut buf)).await {
+            let len = buf.len() - 4;
+            if len >= (1 << 31) {
+                break;
+            }
+            unsafe {
+                let len = (len as u32).to_le_bytes();
+                // SAFETY: `buf` is valid for `4` bytes.
+                ptr::copy_nonoverlapping(len.as_ptr(), buf.as_mut_ptr(), 4);
+            }
+            match done {
+                false => {
+                    if len == 0 {
+                        continue;
                     }
-                    true => {
-                        buf[3] |= 0b1000_0000;
-                        let _ = stream.write_bytes(buf.into(), true).await;
+                    let bytes = std::mem::replace(&mut buf, vec![0; 4]);
+                    if stream.write_bytes(bytes.into(), false).await.is_err() {
                         break;
                     }
                 }
+                true => {
+                    buf[3] |= 0b1000_0000;
+                    let _ = stream.write_bytes(buf.into(), true).await;
+                    break;
+                }
             }
-        })
+        }
     }
 }
