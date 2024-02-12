@@ -91,7 +91,7 @@ fn expand_service(
                 }
                 let rpc_ident = name.to_string();
                 quote!(funcs, {
-                    #id => Some(Output::produce(#name, state, cursor, transport)),
+                    #id => Output::_produce(#name, state, cursor, transport),
                 });
                 let docs_str = rpc_docs.as_str();
                 quote!(func_types, {
