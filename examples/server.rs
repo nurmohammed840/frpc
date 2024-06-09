@@ -32,6 +32,7 @@ struct App {
 impl Application for App {
     async fn stream(self, mut ctx: Ctx) {
         println!("From: {}; {:#?}", self.addr, ctx.req);
+
         ctx.res.status = match ctx.req.uri.path() {
             "/greeter" => ctx.serve(&RPC_CONFIG, (), Greeter::execute).await,
             "/stateful" => ctx.serve(&RPC_CONFIG, self.user, Stateful::execute).await,

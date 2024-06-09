@@ -24,3 +24,16 @@ pub trait Transport {
     ) -> impl Future<Output = ()> + Send;
 }
 
+#[doc(hidden)]
+pub trait Executor {
+    type State;
+    fn execute<'fut, TR>(
+        state: Self::State,
+        id: u16,
+        cursor: &'fut mut &[u8],
+        transport: &'fut mut TR,
+    ) -> Option<impl Future<Output = ()> + Send + 'fut>
+    where
+        TR: Transport + Send;
+}
+

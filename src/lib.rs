@@ -13,7 +13,7 @@ pub use async_gen;
 pub use databuf;
 pub use frpc_macros::*;
 #[doc(hidden)]
-pub use frpc_transport_core::Transport;
+pub use frpc_transport_core::*;
 pub use output::*;
 // pub use service::Service;
 
@@ -168,3 +168,4 @@ where
         G::poll_resume(self, cx)
     }
 }
+

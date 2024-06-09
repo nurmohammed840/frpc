@@ -37,3 +37,22 @@ declare! {
         rpc SayHelloAgain = 2;
     }
 }
+
+impl frpc::Executor for Greeter {
+    type State = ();
+    fn execute<'fut, TR>(
+        state: Self::State,
+        id: u16,
+        cursor: &'fut mut &[u8],
+        transport: &'fut mut TR,
+    ) -> Option<impl std::future::Future<Output = ()> + Send + 'fut>
+    where
+        TR: Transport + Send,
+    {
+        match id {
+            1 => Output::_produce(SayHello, state, cursor, transport),
+            2 => Output::_produce(SayHelloAgain, state, cursor, transport),
+            _ => ::std::option::Option::None,
+        }
+    }
+}

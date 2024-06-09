@@ -31,9 +31,54 @@ pub struct Ctx {
     pub res: Response,
 }
 
+use frpc_transport_core::Executor;
+
 impl Ctx {
     pub fn new(req: Request, res: Response) -> Self {
         Self { req, res }
+    }
+
+    pub async fn serve_v2<S, E>(&mut self, conf: &Config, state: S, _: E) -> StatusCode
+    where
+        E: Executor<State = S>,
+    {
+        match self.req.headers.get("content-length") {
+            Some(len) => {
+                let Ok(Ok(len)) = len.to_str().map(str::parse::<u32>) else {
+                    return StatusCode::BAD_REQUEST;
+                };
+                if len > conf.max_unary_payload_size {
+                    return StatusCode::PAYLOAD_TOO_LARGE;
+                }
+                let mut buf = Vec::with_capacity(len as usize);
+                while let Some(bytes) = self.req.data().await {
+                    let Ok(bytes) = bytes else {
+                        return StatusCode::PARTIAL_CONTENT;
+                    };
+                    buf.extend_from_slice(&bytes);
+                    if buf.len() > len as usize {
+                        return StatusCode::PARTIAL_CONTENT;
+                    }
+                }
+                if buf.len() < 2 {
+                    return StatusCode::BAD_REQUEST;
+                }
+                let id = u16::from_le_bytes([buf[0], buf[1]]);
+                let data = &buf[2..];
+
+                let mut transport = RpcResponder(&mut self.res);
+                let mut cursor = data;
+                let Some(fut) = E::execute(state, id, &mut cursor, &mut transport) else {
+                    return StatusCode::NOT_FOUND;
+                };
+                fut.await;
+                StatusCode::OK
+            }
+            None => {
+                // Uni-Stream, Bi-Stream
+                StatusCode::NOT_IMPLEMENTED
+            }
+        }
     }
 
     pub async fn serve<'this, State>(
