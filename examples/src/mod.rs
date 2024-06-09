@@ -5,6 +5,7 @@ mod stateful;
 pub use greeter::Greeter;
 pub use server_sent_events::ServerSentEvents;
 pub use stateful::Stateful;
+pub use stateful::User;
 
 // 3rd perty library can simplify this process.
 pub fn codegen_init() {

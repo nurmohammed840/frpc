@@ -5,4 +5,4 @@ edition = "2021"
 
 [dependencies]
 frpc-transport-core = { version = "0.1", path = "../transport-core" }
-h2x = "0.4"
+h2x = "0.5"

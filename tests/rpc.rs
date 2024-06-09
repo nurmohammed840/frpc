@@ -5,12 +5,12 @@ mod echo;
 mod sse;
 mod validate;
 
-use frpc_transport_http::{http::HeaderValue, Config, Ctx, Server};
+use frpc_transport_http::{http::HeaderValue, Config, Ctx, Incoming, Request, Response, Server};
 use std::{
     collections::HashSet,
-    fs,
     io::Result,
     process::{Command, Output, Stdio},
+    sync::Arc,
     time::Instant,
 };
 use tokio::task;
@@ -53,35 +53,18 @@ async fn main() -> Result<()> {
         return Ok(());
     }
 
-    let cert = fs::read("examples/cert.pem")?;
-    let key = fs::read("examples/key.pem")?;
-    let server = Server::bind("127.0.0.1:4433", &mut &*cert, &mut &*key)
-        .await
-        .unwrap()
+    let config = Server::config("examples/key.pem", "examples/cert.pem")?;
+
+    let server = Server::bind("127.0.0.1:4433", config)
+        .await?
         .with_graceful_shutdown();
 
     let serve = async {
         loop {
             if let Ok((conn, _addr)) = server.accept().await {
-                conn.incoming(
-                    Default::default(),
-                    |_conn, state, mut req, mut res| async move {
-                        res.headers
-                            .append("access-control-allow-origin", HeaderValue::from_static("*"));
-
-                        let mut ctx = Ctx::new(&mut req, &mut res);
-                        let _ = match ctx.req.uri.path() {
-                            "/rpc/validate" => ctx.serve(&CONF, (), ValidateTest::execute).await,
-                            "/rpc/echo" => ctx.serve(&CONF, state, EchoTest::execute).await,
-                            "/rpc/sse" => ctx.serve(&CONF, (), SSETest::execute).await,
-                            "/rpc/cancellation" => {
-                                ctx.serve(&CONF, (), Cancellation::execute).await
-                            }
-                            _ => return,
-                        };
-                    },
-                    |_| async {},
-                )
+                conn.incoming(App {
+                    state: Default::default(),
+                });
             }
         }
     };
@@ -98,6 +81,28 @@ async fn main() -> Result<()> {
     }
     server.shutdown().await;
     Ok(())
+}
+
+#[derive(Clone)]
+struct App {
+    state: Arc<echo::Context>,
+}
+
+impl Incoming for App {
+    async fn stream(self, mut req: Request, mut res: Response) {
+        res.headers
+            .append("access-control-allow-origin", HeaderValue::from_static("*"));
+
+        let mut ctx = Ctx::new(&mut req, &mut res);
+
+        let _ = match ctx.req.uri.path() {
+            "/rpc/validate" => ctx.serve(&CONF, (), ValidateTest::execute).await,
+            "/rpc/echo" => ctx.serve(&CONF, self.state, EchoTest::execute).await,
+            "/rpc/sse" => ctx.serve(&CONF, (), SSETest::execute).await,
+            "/rpc/cancellation" => ctx.serve(&CONF, (), Cancellation::execute).await,
+            _ => return,
+        };
+    }
 }
 
 fn run_clients() -> Result<()> {
