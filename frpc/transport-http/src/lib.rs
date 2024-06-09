@@ -26,13 +26,13 @@ impl Default for Config {
     }
 }
 
-pub struct Ctx<'req, 'res> {
-    pub req: &'req mut Request,
-    pub res: &'res mut Response,
+pub struct Ctx {
+    pub req: Request,
+    pub res: Response,
 }
 
-impl<'req, 'res> Ctx<'req, 'res> {
-    pub fn new(req: &'req mut Request, res: &'res mut Response) -> Self {
+impl Ctx {
+    pub fn new(req: Request, res: Response) -> Self {
         Self { req, res }
     }
 
@@ -72,7 +72,7 @@ impl<'req, 'res> Ctx<'req, 'res> {
                 let id = u16::from_le_bytes([buf[0], buf[1]]);
                 let data = &buf[2..];
 
-                let mut transport = RpcResponder(self.res);
+                let mut transport = RpcResponder(&mut self.res);
                 let mut cursor = data;
                 let Some(fut) = executor(state, id, &mut cursor, &mut transport) else {
                     return StatusCode::NOT_FOUND;

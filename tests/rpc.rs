@@ -89,11 +89,11 @@ struct App {
 }
 
 impl Incoming for App {
-    async fn stream(self, mut req: Request, mut res: Response) {
+    async fn stream(self, req: Request, mut res: Response) {
         res.headers
             .append("access-control-allow-origin", HeaderValue::from_static("*"));
 
-        let mut ctx = Ctx::new(&mut req, &mut res);
+        let mut ctx = Ctx::new(req, res);
 
         let _ = match ctx.req.uri.path() {
             "/rpc/validate" => ctx.serve(&CONF, (), ValidateTest::execute).await,
