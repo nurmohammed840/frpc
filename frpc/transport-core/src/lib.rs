@@ -24,8 +24,7 @@ pub trait Transport {
     ) -> impl Future<Output = ()> + Send;
 }
 
-#[doc(hidden)]
-pub trait Executor {
+pub trait Service {
     type State;
     fn execute<'fut, TR>(
         state: Self::State,

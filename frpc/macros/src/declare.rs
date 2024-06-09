@@ -113,33 +113,32 @@ fn expand_service(
     let service_ident = service_name.to_string();
     let func_types = Group::new(Delimiter::Bracket, func_types);
 
-    let mut state = Token(TokenStream::new());
-    if has_state {
-        quote!(state, { State });
-    } else {
-        quote!(state, { () });
+    let mut default_state = Token(TokenStream::new());
+    if !has_state {
+        quote!(default_state, {
+            type State = ();
+        });
     };
 
     quote!(output, {
-        const _: () = {
+        impl ::frpc::Service for #service_name {
+            #default_state
             #items
 
-            impl #service_name {
-                pub fn execute<'fut, TR: ::frpc::Transport + ::std::marker::Send>(
-                    state: #state,
-                    id: u16,
-                    cursor: &'fut mut &[u8],
-                    transport: &'fut mut TR,
-                ) -> ::std::option::Option<::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ()> + ::std::marker::Send + 'fut>>>
-                {
-                    use ::frpc::Output;
-                    match id {
-                        #funcs
-                        _ => ::std::option::Option::None
-                    }
+            fn execute<'fut, TR: ::frpc::Transport + ::std::marker::Send>(
+                state: Self::State,
+                id: u16,
+                cursor: &'fut mut &[u8],
+                transport: &'fut mut TR,
+            ) -> ::std::option::Option<impl ::std::future::Future<Output = ()> + ::std::marker::Send + 'fut>
+            {
+                use ::frpc::Output;
+                match id {
+                    #funcs
+                    _ => ::std::option::Option::None
                 }
             }
-        };
+        }
 
         #[cfg(debug_assertions)]
         impl ::std::convert::From<#service_name> for ::frpc::__private::frpc_message::TypeDef {

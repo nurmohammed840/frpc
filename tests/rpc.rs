@@ -96,10 +96,10 @@ impl Incoming for App {
         let mut ctx = Ctx::new(req, res);
 
         let _ = match ctx.req.uri.path() {
-            "/rpc/validate" => ctx.serve(&CONF, (), ValidateTest::execute).await,
-            "/rpc/echo" => ctx.serve(&CONF, self.state, EchoTest::execute).await,
-            "/rpc/sse" => ctx.serve(&CONF, (), SSETest::execute).await,
-            "/rpc/cancellation" => ctx.serve(&CONF, (), Cancellation::execute).await,
+            "/rpc/validate" => ctx.serve(&CONF, (), ValidateTest).await,
+            "/rpc/echo" => ctx.serve(&CONF, self.state, EchoTest).await,
+            "/rpc/sse" => ctx.serve(&CONF, (), SSETest).await,
+            "/rpc/cancellation" => ctx.serve(&CONF, (), Cancellation).await,
             _ => return,
         };
     }

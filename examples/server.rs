@@ -34,9 +34,9 @@ impl Application for App {
         println!("From: {}; {:#?}", self.addr, ctx.req);
 
         ctx.res.status = match ctx.req.uri.path() {
-            "/greeter" => ctx.serve(&RPC_CONFIG, (), Greeter::execute).await,
-            "/stateful" => ctx.serve(&RPC_CONFIG, self.user, Stateful::execute).await,
-            "/sse" => ctx.serve(&RPC_CONFIG, (), ServerSentEvents::execute).await,
+            "/greeter" => ctx.serve(&RPC_CONFIG, (), Greeter).await,
+            "/stateful" => ctx.serve(&RPC_CONFIG, self.user, Stateful).await,
+            "/sse" => ctx.serve(&RPC_CONFIG, (), ServerSentEvents).await,
             _ => http::StatusCode::NOT_FOUND,
         };
         if ctx.res.status != http::StatusCode::OK {
