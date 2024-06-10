@@ -15,7 +15,6 @@ pub use frpc_macros::*;
 #[doc(hidden)]
 pub use frpc_transport_core::*;
 pub use output::*;
-// pub use service::Service;
 
 use async_gen::GeneratorState;
 use databuf::Encode;
