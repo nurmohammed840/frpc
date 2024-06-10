@@ -54,12 +54,11 @@ pub trait Application: Clone + Send + 'static {
 #[macro_export]
 macro_rules! serve {
     ($ctx: ident: $($path: pat => $service: ident; $state: expr)*) => ({
-        $ctx.res.status = match $ctx.req.uri.path() {
-            $($path => $ctx.serve($service, $state).await),*,
-            _ => http::StatusCode::NOT_FOUND,
-        };
-        if $ctx.res.status != http::StatusCode::OK {
-            let _ = $ctx.res.write("Bad Request!").await;
+        if let Some(status) = match $ctx.req.uri.path() {
+            $($path => Some($ctx.serve($service, $state).await)),*,
+            _ => None
+        } {
+            $ctx.res.status = status;
         }
     });
 }
