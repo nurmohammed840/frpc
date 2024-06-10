@@ -5,7 +5,7 @@ mod echo;
 mod sse;
 mod validate;
 
-use frpc_transport_http::{http::HeaderValue, Config, Ctx, Incoming, Request, Response, Server};
+use frpc_transport_http::{http::HeaderValue, Ctx, Incoming, Request, Response, Server};
 use std::{
     collections::HashSet,
     io::Result,
@@ -20,7 +20,6 @@ use echo::EchoTest;
 use sse::SSETest;
 use validate::ValidateTest;
 
-static CONF: Config = Config::new();
 
 fn codegen() {
     use frpc_codegen_client::{typescript, Config};
@@ -96,10 +95,10 @@ impl Incoming for App {
         let mut ctx = Ctx::new(req, res);
 
         let _ = match ctx.req.uri.path() {
-            "/rpc/validate" => ctx.serve(&CONF, (), ValidateTest).await,
-            "/rpc/echo" => ctx.serve(&CONF, self.state, EchoTest).await,
-            "/rpc/sse" => ctx.serve(&CONF, (), SSETest).await,
-            "/rpc/cancellation" => ctx.serve(&CONF, (), Cancellation).await,
+            "/rpc/validate" => ctx.serve(ValidateTest, ()).await,
+            "/rpc/echo" => ctx.serve(EchoTest, self.state).await,
+            "/rpc/sse" => ctx.serve(SSETest, ()).await,
+            "/rpc/cancellation" => ctx.serve(Cancellation, ()).await,
             _ => return,
         };
     }

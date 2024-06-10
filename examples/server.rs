@@ -1,19 +1,16 @@
 mod src;
 
-use frpc_transport_http::{http, Config};
+use frpc_transport_http::http;
 use rpc::*;
 use src::*;
 use std::{io, net::SocketAddr, sync::Arc};
 
-static RPC_CONFIG: Config = Config::new();
-
 #[tokio::main]
 async fn main() -> io::Result<()> {
     codegen_init();
-    println!("Server Runing at 127.0.0.1:4433");
 
-    let server = Server::new("./examples/key.pem", "./examples/cert.pem")?;
-    server
+    println!("Server Runing at 127.0.0.1:4433");
+    Server::new("./examples/key.pem", "./examples/cert.pem")?
         .bind("127.0.0.1:4433", |addr, _| async move {
             App {
                 addr,
@@ -32,15 +29,10 @@ struct App {
 impl Application for App {
     async fn stream(self, mut ctx: Ctx) {
         println!("From: {}; {:#?}", self.addr, ctx.req);
-
-        ctx.res.status = match ctx.req.uri.path() {
-            "/greeter" => ctx.serve(&RPC_CONFIG, (), Greeter).await,
-            "/stateful" => ctx.serve(&RPC_CONFIG, self.user, Stateful).await,
-            "/sse" => ctx.serve(&RPC_CONFIG, (), ServerSentEvents).await,
-            _ => http::StatusCode::NOT_FOUND,
-        };
-        if ctx.res.status != http::StatusCode::OK {
-            let _ = ctx.res.write("Bad Request!").await;
+        serve! {ctx:
+            "/greeter" => Greeter; ()
+            "/stateful" => Stateful; self.user
+            "/sse" => ServerSentEvents; ()
         }
     }
     async fn close(self) {

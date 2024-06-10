@@ -37,7 +37,7 @@ impl Server {
                 tokio::spawn(async move {
                     while let Some(Ok((req, res))) = conn.accept().await {
                         let app = app.clone();
-                        tokio::spawn(async move { app.stream(Ctx { req, res }).await });
+                        tokio::spawn(async move { app.stream(Ctx::new(req, res)).await });
                     }
                     app.close().await;
                 });
@@ -51,4 +51,17 @@ pub trait Application: Clone + Send + 'static {
     fn close(self) -> impl Future<Output = ()> + Send {
         async {}
     }
+}
+
+#[macro_export]
+macro_rules! serve {
+    ($ctx: ident: $($path: pat => $service: ident; $state: expr)*) => ({
+        $ctx.res.status = match $ctx.req.uri.path() {
+            $($path => $ctx.serve($service, $state).await),*,
+            _ => http::StatusCode::NOT_FOUND,
+        };
+        if $ctx.res.status != http::StatusCode::OK {
+            let _ = $ctx.res.write("Bad Request!").await;
+        }
+    });
 }

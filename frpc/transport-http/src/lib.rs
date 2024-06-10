@@ -2,42 +2,37 @@ use frpc_transport_core::*;
 use h2x::http::StatusCode;
 pub use h2x::*;
 use std::{
-    fmt::Debug,
     future::poll_fn,
     io, mem, ptr,
     task::{Context, Poll},
 };
 
-#[derive(Debug, Clone)]
-pub struct Config {
-    pub max_unary_payload_size: u32,
-}
-impl Config {
-    pub const fn new() -> Self {
-        Self {
-            max_unary_payload_size: 128 * 1024,
-        }
-    }
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 pub struct Ctx {
     pub req: Request,
     pub res: Response,
+
+    // config
+    pub max_unary_payload_size: u32,
 }
 
+impl std::ops::Deref for Ctx {
+    type Target = Request;
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.req
+    }
+}
 
 impl Ctx {
     pub fn new(req: Request, res: Response) -> Self {
-        Self { req, res }
+        Self {
+            req,
+            res,
+            max_unary_payload_size: 128 * 1024,
+        }
     }
 
-    pub async fn serve<S, E>(&mut self, conf: &Config, state: S, _: E) -> StatusCode
+    pub async fn serve<S, E>(&mut self, _: E, state: S) -> StatusCode
     where
         E: Service<State = S>,
     {
@@ -46,7 +41,7 @@ impl Ctx {
                 let Ok(Ok(len)) = len.to_str().map(str::parse::<u32>) else {
                     return StatusCode::BAD_REQUEST;
                 };
-                if len > conf.max_unary_payload_size {
+                if len > self.max_unary_payload_size {
                     return StatusCode::PAYLOAD_TOO_LARGE;
                 }
                 let mut buf = Vec::with_capacity(len as usize);
