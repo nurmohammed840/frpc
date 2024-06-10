@@ -6,6 +6,7 @@ use frpc_transport_http::{
 use std::{future::Future, io, net::SocketAddr, path::Path, sync::Arc};
 use tokio::net::{TcpStream, ToSocketAddrs};
 
+pub use frpc;
 pub use frpc::*;
 pub use frpc_transport_http::Ctx;
 
