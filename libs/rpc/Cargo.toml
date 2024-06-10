@@ -4,6 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-frpc = { path = "../../" }
 frpc-transport-http = { path = "../../frpc/transport-http" }
 tokio = "1"
