@@ -95,7 +95,7 @@ fn expand_service(
                 });
                 let docs_str = rpc_docs.as_str();
                 quote!(func_types, {
-                    frpc::__private::fn_sig(&#name, &mut __costom_types, #id,  #rpc_ident, #docs_str),
+                    ::frpc::__private::fn_sig(&#name, &mut __costom_types, #id,  #rpc_ident, #docs_str),
                 });
                 rpc_docs.clear();
             }
@@ -121,18 +121,18 @@ fn expand_service(
     };
 
     quote!(output, {
-        impl frpc::Service for #service_name {
+        impl ::frpc::Service for #service_name {
             #default_state
             #items
 
-            fn execute<'fut, TR: frpc::Transport + ::std::marker::Send>(
+            fn execute<'fut, TR: ::frpc::Transport + ::std::marker::Send>(
                 state: Self::State,
                 id: u16,
                 cursor: &'fut mut &[u8],
                 transport: &'fut mut TR,
             ) -> ::std::option::Option<impl ::std::future::Future<Output = ()> + ::std::marker::Send + 'fut>
             {
-                use frpc::Output;
+                use ::frpc::Output;
                 match id {
                     #funcs
                     _ => ::std::option::Option::None
@@ -141,9 +141,9 @@ fn expand_service(
         }
 
         #[cfg(debug_assertions)]
-        impl ::std::convert::From<#service_name> for frpc::__private::frpc_message::TypeDef {
+        impl ::std::convert::From<#service_name> for ::frpc::__private::frpc_message::TypeDef {
             fn from(_: #service_name) -> Self {
-                let mut __costom_types = frpc::__private::frpc_message::CostomTypes::default();
+                let mut __costom_types = ::frpc::__private::frpc_message::CostomTypes::default();
                 let funcs = ::std::vec::Vec::from(#func_types);
                 Self::new(#service_ident, __costom_types, funcs, #service_docs)
             }
