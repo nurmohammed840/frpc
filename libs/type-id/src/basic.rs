@@ -47,8 +47,14 @@ impl<T: TypeId, E: TypeId> TypeId for Result<T, E> {
     }
 }
 
-impl TypeId for &str {
-    fn ty(_: &mut CostomTypes) -> Ty {
-        Ty::String
-    }
+macro_rules! impl_str_types {
+    [$($ty: ty),*] => ($(
+        impl TypeId for $ty {
+            fn ty(_: &mut CostomTypes) -> Ty {
+                Ty::String
+            }
+        }
+    )*);
 }
+
+impl_str_types!(&str, Box<dyn std::fmt::Display>, Box<dyn std::error::Error>, Box<dyn std::error::Error + Send + Sync>);
