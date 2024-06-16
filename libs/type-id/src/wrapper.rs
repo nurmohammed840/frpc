@@ -18,6 +18,18 @@ impl<T: TypeId> TypeId for Box<T> {
     }
 }
 
+impl TypeId for Box<dyn std::error::Error> {
+    fn ty(_: &mut CostomTypes) -> Ty {
+        Ty::String
+    }
+}
+
+impl TypeId for Box<dyn std::fmt::Display> {
+    fn ty(_: &mut CostomTypes) -> Ty {
+        Ty::String
+    }
+}
+
 macro_rules! impl_for_typles {
     [$(($($ty: ident)*))*]  => ($(
         impl<$($ty),*> TypeId for ($($ty,)*)

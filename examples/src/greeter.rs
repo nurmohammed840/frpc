@@ -35,5 +35,7 @@ declare! {
 
         /// Sends another greeting
         rpc SayHelloAgain = 2;
+
+        /// Sends another greeting
     }
 }
