@@ -1,6 +1,6 @@
 mod src;
 
-use rpc::*;
+use frpc_transport::*;
 use src::*;
 use std::{io, net::SocketAddr, sync::Arc};
 

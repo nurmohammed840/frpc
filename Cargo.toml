@@ -27,7 +27,7 @@ frpc-transport-core = { version = "0.1", path = "frpc/transport-core" }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }
 frpc-transport-http = { path = "frpc/transport-http" }
 frpc-codegen-client = { path = "frpc/codegen-client" }
-rpc = { path = "libs/rpc" }
+frpc-transport = { path = "frpc/transport" }
 
 # [profile.dev.package."frpc-codegen-client"]
 # opt-level = 3

@@ -9,6 +9,10 @@ Add this to your `Cargo.toml` file.
 ```toml
 [dependencies]
 frpc = { git = "https://github.com/nurmohammed840/frpc" }
+frpc-transport = { git = "https://github.com/nurmohammed840/frpc" }
+
+# Required for codegen
+frpc-codegen-client = { git = "https://github.com/nurmohammed840/frpc" }
 ```
 
 ### Example
