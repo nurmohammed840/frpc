@@ -1,3 +1,5 @@
+// Run: `cargo run -r --example bench`
+
 use frpc::{databuf::Decode, Return};
 use std::{io::Write, time::Instant};
 
@@ -12,7 +14,6 @@ async fn main() {
     let time = Instant::now();
     let right = rpc().await;
     println!("RPC: {:?}", time.elapsed());
-
     assert_eq!(left, right)
 }
 
@@ -28,17 +29,10 @@ async fn normal() -> Vec<u8> {
         let data = [i as u8, i as u8];
         let mut cursor = data.as_slice();
 
-        // Why `.write_all()` instade of `.push()` ?
-        // Ans: transport layer usually don't have push method.
-
         tcp.write_all(&[Box::pin(async {
-            // Why `Box::pin(...)` ? see [FutState] in `./src/output.rs` for more.
-
-            // Why `Decode::decode()` ?
-            // Ans: Some sort of decoding in needed in any protocol.
+            // Some sort of decoding in needed in any protocol.
             let a = Decode::decode::<{ frpc::DATABUF_CONFIG }>(&mut cursor).unwrap();
             let b = Decode::decode::<{ frpc::DATABUF_CONFIG }>(&mut cursor).unwrap();
-
             add(a, b).0
         })
         .await])
@@ -61,11 +55,13 @@ async fn rpc() -> Vec<u8> {
 struct DummyTransport(Vec<u8>);
 
 impl frpc::Transport for DummyTransport {
-    async fn unary_sync(
+    fn unary_sync(
         &mut self,
         cb: impl FnOnce(&mut dyn std::io::Write) -> std::io::Result<()> + Send,
-    ) {
-        cb(&mut self.0).unwrap()
+    ) -> impl std::future::Future<Output = ()> + Send {
+        Box::pin(async {
+            cb(&mut self.0).unwrap();
+        })
     }
 
     async fn unary(
