@@ -7,6 +7,7 @@ use frpc_transport_http::{
 use std::{future::Future, io, net::SocketAddr, path::Path, sync::Arc};
 use tokio::net::{TcpStream, ToSocketAddrs};
 
+#[derive(Clone)]
 pub struct Server {
     pub config: Arc<rustls::ServerConfig>,
 }
@@ -20,7 +21,7 @@ impl Server {
     }
 
     pub async fn bind<Fut, App>(
-        &self,
+        self,
         addr: impl ToSocketAddrs,
         mut app: impl FnMut(SocketAddr, &mut Conn<TlsStream<TcpStream>>) -> Fut,
     ) -> io::Result<()>
@@ -28,7 +29,7 @@ impl Server {
         Fut: Future<Output = App>,
         App: Application,
     {
-        let server = http::Server::bind(addr, self.config.clone()).await?;
+        let server = http::Server::bind(addr, self.config).await?;
         loop {
             if let Ok((mut conn, addr)) = server.accept().await {
                 let app = app(addr, &mut conn).await;
