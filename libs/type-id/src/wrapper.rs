@@ -1,4 +1,5 @@
 use super::*;
+use std::{rc::Rc, sync::Arc};
 
 // impl TypeId for std::convert::Infallible {
 //     fn ty() -> Ty {
@@ -6,17 +7,17 @@ use super::*;
 //     }
 // }
 
-impl<T: TypeId> TypeId for &T {
-    fn ty(c: &mut CostomTypes) -> Ty {
-        T::ty(c)
-    }
+macro_rules! impl_type_id_for {
+    [$($ty: ty), *] => {$(
+        impl<T: TypeId> TypeId for $ty {
+            fn ty(c: &mut CostomTypes) -> Ty {
+                T::ty(c)
+            }
+        }
+    )*};
 }
 
-impl<T: TypeId> TypeId for Box<T> {
-    fn ty(c: &mut CostomTypes) -> Ty {
-        T::ty(c)
-    }
-}
+impl_type_id_for! { &T, Box<T>, Arc<T>, Rc<T> }
 
 macro_rules! impl_for_typles {
     [$(($($ty: ident)*))*]  => ($(
