@@ -9,10 +9,12 @@ export interface RpcTransport {
     close(): Promise<void>
 }
 
+export interface FetchOption extends Pick<RequestInit, 'mode' | 'keepalive' | 'headers'> { }
+
 export class HttpTransport implements RpcTransport {
-    constructor(public url: URL | RequestInfo, public option = { maxChunkSize: 8 * 1024 * 1024 }) { }
+    constructor(public url: URL | RequestInfo, public option = { maxChunkSize: 8 * 1024 * 1024, fetchOption: {} as FetchOption | undefined }) { }
     unary(): Write & { call(s: AbortSignal): Promise<Uint8Array> } {
-        const url = this.url;
+        const { url, option } = this;
         const chunks: Uint8Array[] = [];
         return {
             write(bytes: Uint8Array) {
@@ -21,7 +23,7 @@ export class HttpTransport implements RpcTransport {
             flush() { },
             async call(signal) {
                 const body = concat_uint8(chunks);
-                const res = await fetch(url, { method: "POST", body, signal });
+                const res = await fetch(url, { ...option.fetchOption, method: "POST", body, signal });
                 if (!res.ok) {
                     throw new Error("Bad request");
                 }
@@ -31,7 +33,7 @@ export class HttpTransport implements RpcTransport {
     }
 
     sse() {
-        let { url, option } = this;
+        const { url, option } = this;
         const chunks: Uint8Array[] = [];
         return {
             write(bytes: Uint8Array) {
@@ -41,7 +43,7 @@ export class HttpTransport implements RpcTransport {
 
             async *call(signal: AbortSignal) {
                 const body = concat_uint8(chunks);
-                const res = await fetch(url, { method: "POST", body, signal });
+                const res = await fetch(url, { ...option.fetchOption, method: "POST", body, signal });
                 if (!res.body) {
                     throw new Error("unexpected empty body");
                 }
