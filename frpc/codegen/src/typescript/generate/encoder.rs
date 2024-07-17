@@ -2,11 +2,11 @@ use crate::typescript::interface::EnumReprValue;
 
 use super::*;
 
-pub fn main(f: &mut impl Write, provider: &CodeGen) -> Result {
+pub fn main(f: &mut impl Write, provider: &CodeGen, ident_map: &IdentMap) -> Result {
     writeln!(f, "let extern = {{")?;
 
     for path in &provider.input_paths {
-        let ident = object_ident_from(path);
+        let ident = &ident_map[path];
         writeln!(f, "{ident}(d: use.BufWriter, z: {ident}) {{")?;
 
         match &provider.type_def.costom_types[*path] {
@@ -33,10 +33,10 @@ pub fn main(f: &mut impl Write, provider: &CodeGen) -> Result {
                     let index = i.get(index);
                     writeln!(f, "case {name:?}: d.{repr_ty}({index});")?;
                     match kind {
-                        EnumKind::Struct(fields) => write_struct(f, fields)?,
+                        EnumKind::Struct(fields) => write_struct(f, fields, ident_map)?,
                         EnumKind::Tuple(fields) => {
                             for (i, TupleField { ty, .. }) in fields.iter().enumerate() {
-                                writeln!(f, "{}(z[{i}]);", fmt_ty(ty, "extern"))?;
+                                writeln!(f, "{}(z[{i}]);", fmt_ty(ty, "extern", ident_map))?;
                             }
                         }
                         EnumKind::Unit => {}
@@ -45,9 +45,13 @@ pub fn main(f: &mut impl Write, provider: &CodeGen) -> Result {
                 }
                 writeln!(f, "}}")?;
             }
-            CustomTypeKind::Struct(data) => write_struct(f, &data.fields)?,
+            CustomTypeKind::Struct(data) => write_struct(f, &data.fields, ident_map)?,
             CustomTypeKind::Tuple(data) => {
-                writeln!(f, "return {}(z);", fmt_tuple(&data.fields, "extern"))?;
+                writeln!(
+                    f,
+                    "return {}(z);",
+                    fmt_tuple(&data.fields, "extern", ident_map)
+                )?;
             }
         }
         writeln!(f, "}},")?;
@@ -55,8 +59,8 @@ pub fn main(f: &mut impl Write, provider: &CodeGen) -> Result {
     writeln!(f, "}}")
 }
 
-fn write_struct(f: &mut impl Write, fields: &[StructField]) -> Result {
+fn write_struct(f: &mut impl Write, fields: &[StructField], ident_map: &IdentMap) -> Result {
     fields.iter().try_for_each(|StructField { name, ty, .. }| {
-        writeln!(f, "{}(z.{name});", fmt_ty(ty, "extern"))
+        writeln!(f, "{}(z.{name});", fmt_ty(ty, "extern", ident_map))
     })
 }

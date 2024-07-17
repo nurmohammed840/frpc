@@ -1,6 +1,8 @@
-use crate::utils::{join, object_ident_from, write_doc_comments};
+use crate::utils::{join, write_doc_comments};
 use frpc_message::*;
 use std::fmt::{Display, Result, Write};
+
+use super::IdentMap;
 
 pub(super) struct EnumReprValue(pub EnumRepr);
 
@@ -16,7 +18,8 @@ impl Display for EnumReprValue {
     }
 }
 
-pub fn gen_type(f: &mut impl Write, ident: String, kind: &CustomTypeKind) -> Result {
+pub fn gen_type(f: &mut impl Write, ident_map: &IdentMap, path: &str, kind: &CustomTypeKind) -> Result {
+    let ident = &ident_map[path];
     match kind {
         CustomTypeKind::Unit(unit) => {
             write_doc_comments(f, &unit.doc)?;
@@ -49,13 +52,13 @@ pub fn gen_type(f: &mut impl Write, ident: String, kind: &CustomTypeKind) -> Res
             let fields = data
                 .fields
                 .iter()
-                .map(|f| (&f.doc, &f.name, fmt_js_ty(&f.ty)));
+                .map(|f| (&f.doc, &f.name, fmt_js_ty(&f.ty, ident_map)));
 
             write_map(f, ":", fields)?;
         }
         CustomTypeKind::Tuple(data) => {
             write_doc_comments(f, &data.doc)?;
-            let fields = join(data.fields.iter().map(|f| fmt_js_ty(&f.ty)), ", ");
+            let fields = join(data.fields.iter().map(|f| fmt_js_ty(&f.ty, ident_map)), ", ");
             writeln!(f, "export type {ident} = [{fields}];")?;
         }
         CustomTypeKind::Enum(data) => {
@@ -71,13 +74,13 @@ pub fn gen_type(f: &mut impl Write, ident: String, kind: &CustomTypeKind) -> Res
                     EnumKind::Unit => String::new(),
                     EnumKind::Struct(dta) => join(
                         dta.iter()
-                            .map(|f| format!("{}: {}", f.name, fmt_js_ty(&f.ty))),
+                            .map(|f| format!("{}: {}", f.name, fmt_js_ty(&f.ty, ident_map))),
                         ", ",
                     ),
                     EnumKind::Tuple(data) => join(
                         data.iter()
                             .enumerate()
-                            .map(|(i, field)| format!("{i}: {}", fmt_js_ty(&field.ty))),
+                            .map(|(i, field)| format!("{i}: {}", fmt_js_ty(&field.ty, ident_map))),
                         ", ",
                     ),
                 };
@@ -102,7 +105,7 @@ where
     writeln!(f, "}}")
 }
 
-pub fn fmt_js_ty(ty: &Ty) -> String {
+pub fn fmt_js_ty(ty: &Ty, ident_map: &IdentMap) -> String {
     match ty {
         Ty::u8 | Ty::u16 | Ty::u32 | Ty::i8 | Ty::i16 | Ty::i32 | Ty::f32 | Ty::f64 => {
             "number".into()
@@ -117,21 +120,21 @@ pub fn fmt_js_ty(ty: &Ty) -> String {
             Ty::i8 => "Int8Array",
             Ty::f32 => "Float32Array",
             Ty::f64 => "Float64Array",
-            _ => return format!("Array<{}>", fmt_js_ty(ty)),
+            _ => return format!("Array<{}>", fmt_js_ty(ty, ident_map)),
         }
         .to_string(),
 
-        Ty::Option(ty) => format!("use.Option<{}>", fmt_js_ty(ty)),
-        Ty::Result(ty) => format!("use.Result<{}, {}>", fmt_js_ty(&ty.0), fmt_js_ty(&ty.1)),
+        Ty::Option(ty) => format!("use.Option<{}>", fmt_js_ty(ty, ident_map)),
+        Ty::Result(ty) => format!("use.Result<{}, {}>", fmt_js_ty(&ty.0, ident_map), fmt_js_ty(&ty.1, ident_map)),
 
-        Ty::Map { ty, .. } => format!("Map<{}, {}>", fmt_js_ty(&ty.0), fmt_js_ty(&ty.1)),
+        Ty::Map { ty, .. } => format!("Map<{}, {}>", fmt_js_ty(&ty.0, ident_map), fmt_js_ty(&ty.1, ident_map)),
         Ty::Tuple(tys) => {
             if tys.is_empty() {
                 "null".to_string()
             } else {
-                format!("[{}]", join(tys.iter().map(fmt_js_ty), ", "))
+                format!("[{}]", join(tys.iter().map(|ty| fmt_js_ty(ty, ident_map)), ", "))
             }
         }
-        Ty::CustomType(path) => object_ident_from(path),
+        Ty::CustomType(path) => ident_map[path.as_str()].to_owned(),
     }
 }

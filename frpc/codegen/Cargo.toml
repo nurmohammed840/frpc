@@ -5,4 +5,4 @@ edition = "2021"
 
 [dependencies]
 std-lib = { version = "0.1", path = "../../libs/std-lib" }
-frpc-message = { version = "0.1", path = "../message" }
+frpc-message = { version = "0.1", path = "../message", features = [] }

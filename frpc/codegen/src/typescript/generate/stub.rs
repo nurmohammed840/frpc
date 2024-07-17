@@ -1,7 +1,7 @@
 use super::*;
 use crate::{typescript::interface::fmt_js_ty, utils::write_doc_comments};
 
-pub fn main(f: &mut impl Write, type_def: &TypeDef) -> Result {
+pub fn main(f: &mut impl Write, type_def: &TypeDef, ident_map: &IdentMap) -> Result {
     write_doc_comments(f, &type_def.docs)?;
     writeln!(f, "export default class Self {{")?;
     writeln!(f, "constructor(private rpc: use.RpcTransport) {{}}")?;
@@ -20,7 +20,7 @@ pub fn main(f: &mut impl Write, type_def: &TypeDef) -> Result {
             write_doc_comments(f, docs)?;
             write!(f, "{ident}(")?;
             for (num, ty) in args.iter().enumerate() {
-                write!(f, "_{num}: {}, ", fmt_js_ty(ty))?;
+                write!(f, "_{num}: {}, ", fmt_js_ty(ty, &ident_map))?;
             }
             writeln!(f, ") {{")?;
             {
@@ -33,9 +33,9 @@ pub fn main(f: &mut impl Write, type_def: &TypeDef) -> Result {
                 for (num, arg) in args.iter().enumerate() {
                     match arg {
                         Ty::CustomType(path) => {
-                            writeln!(f, "extern.{}(d, _{num});", object_ident_from(path))?
+                            writeln!(f, "extern.{}(d, _{num});", ident_map[path.as_str()])?
                         }
-                        ty => writeln!(f, "{}(_{num});", fmt_ty(ty, "extern"))?,
+                        ty => writeln!(f, "{}(_{num});", fmt_ty(ty, "extern", ident_map))?,
                     };
                 }
                 writeln!(f, "}},")?;
@@ -46,7 +46,7 @@ pub fn main(f: &mut impl Write, type_def: &TypeDef) -> Result {
                         writeln!(f, "let _buf = await data")?;
                         if !retn.is_empty_tuple() {
                             writeln!(f, "let d = use.Decoder.from(_buf);")?;
-                            writeln!(f, "return {}", decode_data(retn))?;
+                            writeln!(f, "return {}", decode_data(retn, ident_map))?;
                         }
                         writeln!(f, "}},")?;
                     }
@@ -59,9 +59,9 @@ pub fn main(f: &mut impl Write, type_def: &TypeDef) -> Result {
                         writeln!(f, "let {{ value, done }} = await s.next();")?;
                         writeln!(f, "let d = use.Decoder.from(value);")?;
                         writeln!(f, "if (done) {{")?;
-                        writeln!(f, "return {}", decode_data(return_ty))?;
+                        writeln!(f, "return {}", decode_data(return_ty, ident_map))?;
                         writeln!(f, "}}")?;
-                        writeln!(f, "yield {}", decode_data(yield_ty))?;
+                        writeln!(f, "yield {}", decode_data(yield_ty, ident_map))?;
                         writeln!(f, "}}")?;
                         writeln!(f, "}}")?;
                     }
@@ -74,14 +74,14 @@ pub fn main(f: &mut impl Write, type_def: &TypeDef) -> Result {
     writeln!(f, "}}")
 }
 
-fn decode_data(ty: &Ty) -> String {
+fn decode_data(ty: &Ty, ident_map: &IdentMap) -> String {
     if ty.is_empty_tuple() {
         return String::new();
     }
     match ty {
         Ty::CustomType(path) => {
-            format!("struct.{}(d)", object_ident_from(path))
+            format!("struct.{}(d)", ident_map[path.as_str()])
         }
-        ty => format!("{}()", fmt_ty(ty, "struct")),
+        ty => format!("{}()", fmt_ty(ty, "struct", ident_map)),
     }
 }

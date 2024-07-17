@@ -2,7 +2,7 @@
 
 import { assertEquals, assertThrows } from "https://deno.land/std@0.175.0/testing/asserts.ts";
 import { HttpTransport } from "../../target/rpc/http.transport.ts";
-import Lib, { Echo_Log as Log } from "../../target/rpc/EchoTest.ts";
+import Lib, { Log } from "../../target/rpc/EchoTest.ts";
 
 let lib = new Lib(new HttpTransport("https://localhost:4433/rpc/echo"));
 

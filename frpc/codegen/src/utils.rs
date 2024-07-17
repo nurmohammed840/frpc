@@ -25,52 +25,33 @@ pub fn join(strings: impl Iterator<Item = String>, separator: &str) -> String {
     string
 }
 
-pub fn object_ident_from(path: &str) -> String {
+pub fn uppercase_first(data: &str) -> String {
     let mut out = String::new();
-
-    let mut idents = path.split("::");
-    idents.next();
-
-    let mut sep_next = false;
-    for mut ident in idents {
-        if let Some(rest) = ident.strip_prefix("r#") {
-            ident = rest;
-        }
-        if sep_next {
-            out += "_";
+    let mut first = true;
+    for value in data.chars() {
+        if first {
+            out.push_str(&value.to_uppercase().to_string());
+            first = false;
         } else {
-            sep_next = true;
-        }
-        out += &capitalize_by(ident, '_');
-    }
-    out
-}
-
-fn capitalize_by(path: &str, sep: char) -> String {
-    let mut out = String::new();
-    let mut capitalize_next = true;
-    for ch in path.chars() {
-        if ch == sep {
-            capitalize_next = true;
-        } else if capitalize_next {
-            capitalize_next = false;
-            out.push(ch.to_ascii_uppercase());
-        } else {
-            out.push(ch);
+            out.push(value);
         }
     }
     out
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+// fn capitalize_by(path: &str, sep: char) -> String {
+//     let mut out = String::new();
+//     let mut capitalize_next = true;
+//     for ch in path.chars() {
+//         if ch == sep {
+//             capitalize_next = true;
+//         } else if capitalize_next {
+//             capitalize_next = false;
+//             out.push(ch.to_ascii_uppercase());
+//         } else {
+//             out.push(ch);
+//         }
+//     }
+//     out
+// }
 
-    #[test]
-    fn convert_object_name_from_path() {
-        assert_eq!(
-            object_ident_from("let::r#use::new::class_name"),
-            "Use_New_ClassName"
-        );
-    }
-}

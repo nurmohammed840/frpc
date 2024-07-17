@@ -1,24 +1,24 @@
 use crate::CodeGen;
-
+use super::IdentMap;
 pub mod decoder;
 pub mod encoder;
 pub mod stub;
 
-use crate::{fmt, utils::object_ident_from, Fmt};
+use crate::{fmt, Fmt};
 use frpc_message::*;
 use std::fmt::{Result, Write};
 
-fn fmt_tuple<'a>(fields: &'a [TupleField], scope: &'static str) -> fmt!(type 'a) {
+fn fmt_tuple<'a>(fields: &'a [TupleField], scope: &'static str, ident_map: &'a IdentMap) -> fmt!(type 'a) {
     Fmt(move |f| {
         write!(f, "d.tuple(")?;
         for TupleField { ty, .. } in fields.iter() {
-            write!(f, "{},", fmt_ty(ty, scope))?;
+            write!(f, "{},", fmt_ty(ty, scope, ident_map))?;
         }
         write!(f, ")")
     })
 }
 
-fn fmt_ty<'a>(ty: &'a Ty, scope: &'a str) -> fmt!(type 'a) {
+fn fmt_ty<'a>(ty: &'a Ty, scope: &'a str, ident_map: &'a IdentMap) -> fmt!(type 'a) {
     Fmt(move |f| match ty {
         Ty::u8 => write!(f, "d.u8"),
         Ty::u16 => write!(f, "d.num('U', 16)"),
@@ -40,12 +40,12 @@ fn fmt_ty<'a>(ty: &'a Ty, scope: &'a str) -> fmt!(type 'a) {
         // Ty::char => write!(f, "d.char"),
         Ty::String => write!(f, "d.str"),
 
-        Ty::Option(ty) => write!(f, "d.option({})", fmt_ty(ty, scope)),
+        Ty::Option(ty) => write!(f, "d.option({})", fmt_ty(ty, scope, ident_map)),
         Ty::Result(ty) => write!(
             f,
             "d.result({}, {})",
-            fmt_ty(&ty.0, scope),
-            fmt_ty(&ty.1, scope)
+            fmt_ty(&ty.0, scope, ident_map),
+            fmt_ty(&ty.1, scope, ident_map)
         ),
 
         Ty::Tuple(tys) => {
@@ -54,7 +54,7 @@ fn fmt_ty<'a>(ty: &'a Ty, scope: &'a str) -> fmt!(type 'a) {
             } else {
                 write!(f, "d.tuple(")?;
                 tys.iter()
-                    .try_for_each(|ty| write!(f, "{},", fmt_ty(ty, scope)))?;
+                    .try_for_each(|ty| write!(f, "{},", fmt_ty(ty, scope, ident_map)))?;
                 write!(f, ")")
             }
         }
@@ -63,22 +63,22 @@ fn fmt_ty<'a>(ty: &'a Ty, scope: &'a str) -> fmt!(type 'a) {
             Ty::i8 => write!(f, "d.fixed_buf('i8', {len})"),
             Ty::f32 => write!(f, "d.fixed_buf('f32', {len})"),
             Ty::f64 => write!(f, "d.fixed_buf('f64', {len})"),
-            ty => write!(f, "d.fixed_arr({}, {len})", fmt_ty(ty, scope)),
+            ty => write!(f, "d.fixed_arr({}, {len})", fmt_ty(ty, scope, ident_map)),
         },
         Ty::Set { ty, .. } => match ty.as_ref() {
             Ty::u8 => write!(f, "d.buf('u8')"),
             Ty::i8 => write!(f, "d.buf('i8')"),
             Ty::f32 => write!(f, "d.buf('f32')"),
             Ty::f64 => write!(f, "d.buf('f64')"),
-            ty => write!(f, "d.arr({})", fmt_ty(ty, scope)),
+            ty => write!(f, "d.arr({})", fmt_ty(ty, scope, ident_map)),
         },
         Ty::Map { ty, .. } => write!(
             f,
             "d.map({}, {})",
-            fmt_ty(&ty.0, scope),
-            fmt_ty(&ty.1, scope)
+            fmt_ty(&ty.0, scope, ident_map),
+            fmt_ty(&ty.1, scope, ident_map)
         ),
-        Ty::CustomType(path) => write!(f, "{scope}.{}.bind(0, d)", object_ident_from(path)),
+        Ty::CustomType(path) => write!(f, "{scope}.{}.bind(0, d)", ident_map[path.as_str()]),
     })
 }
 
@@ -129,7 +129,7 @@ mod tests {
             },
         ];
         assert_eq!(
-            format!("{}", fmt_ty(&Tuple(tys), "This")),
+            format!("{}", fmt_ty(&Tuple(tys), "This", &IdentMap::new(["::path::ident"]))),
             "d.tuple(d.option(d.bool),d.result(This.PathIdent.bind(0, d), d.str),d.map(d.str, d.vec(d.u8)),)"
         );
     }

@@ -1,10 +1,10 @@
 use super::*;
 use crate::{typescript::interface::EnumReprValue, utils::write_doc_comments};
 
-pub fn main(f: &mut impl Write, provider: &CodeGen) -> Result {
+pub fn main(f: &mut impl Write, provider: &CodeGen, ident_map: &IdentMap) -> Result {
     writeln!(f, "let struct = {{")?;
     for path in &provider.output_paths {
-        let ident = object_ident_from(path);
+        let ident = &ident_map[path];
         writeln!(f, "{ident}(d: use.Decoder): {ident} {{")?;
 
         match &provider.type_def.costom_types[*path] {
@@ -31,11 +31,11 @@ pub fn main(f: &mut impl Write, provider: &CodeGen) -> Result {
                             let index = i.get(index);
                             writeln!(f, "case {index}: return {{\ntype: {name:?},")?;
                             match kind {
-                                EnumKind::Struct(fields) => write_struct(f, fields)?,
+                                EnumKind::Struct(fields) => write_struct(f, fields, ident_map)?,
                                 EnumKind::Tuple(fields) => {
                                     for (i, TupleField { doc, ty }) in fields.iter().enumerate() {
                                         write_doc_comments(f, doc)?;
-                                        writeln!(f, " {i}: {}(),", fmt_ty(ty, "struct"))?;
+                                        writeln!(f, " {i}: {}(),", fmt_ty(ty, "struct", ident_map))?;
                                     }
                                 }
                                 EnumKind::Unit => {}
@@ -52,11 +52,11 @@ pub fn main(f: &mut impl Write, provider: &CodeGen) -> Result {
             }
             CustomTypeKind::Struct(data) => {
                 f.write_str("return {\n")?;
-                write_struct(f, &data.fields)?;
+                write_struct(f, &data.fields, ident_map)?;
                 f.write_str("}\n")?;
             }
             CustomTypeKind::Tuple(data) => {
-                writeln!(f, "return {}();", fmt_tuple(&data.fields, "struct"))?;
+                writeln!(f, "return {}();", fmt_tuple(&data.fields, "struct", ident_map))?;
             }
         }
         writeln!(f, "}},")?;
@@ -64,14 +64,14 @@ pub fn main(f: &mut impl Write, provider: &CodeGen) -> Result {
     writeln!(f, "}}")
 }
 
-fn write_struct(f: &mut impl Write, fields: &[StructField]) -> Result {
+fn write_struct(f: &mut impl Write, fields: &[StructField], ident_map: &IdentMap) -> Result {
     fields.iter().try_for_each(|StructField { doc, name, ty }| {
         write_doc_comments(f, doc)?;
-        writeln!(f, "{name}: {}(),", fmt_ty(ty, "struct"))
+        writeln!(f, "{name}: {}(),", fmt_ty(ty, "struct", ident_map))
     })
 }
 
-fn write_enum(f: &mut impl Write, ident: &String, items: fmt!(type)) -> Result {
+fn write_enum(f: &mut impl Write, ident: &str, items: fmt!(type)) -> Result {
     writeln!(
         f,
         "switch (num) {{\n{items}default: throw use.enumErr({ident:?}, num);\n}}"
