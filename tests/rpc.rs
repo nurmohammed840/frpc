@@ -20,7 +20,6 @@ use echo::EchoTest;
 use sse::SSETest;
 use validate::ValidateTest;
 
-
 fn codegen() {
     use frpc_codegen_client::{typescript, Config};
     let time = Instant::now();

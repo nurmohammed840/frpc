@@ -100,9 +100,9 @@ where
             Ok(ref mut fut) => unsafe { Pin::new_unchecked(fut) }
                 .poll(cx)
                 .map(|ret| Encode::encode::<{ crate::DATABUF_CONFIG }>(&ret, buf)),
-            Err(ref mut err) => {
-                Poll::Ready(Err(err.take().expect("Transport::unary(..)` polled after completion")))
-            }
+            Err(ref mut err) => Poll::Ready(Err(err
+                .take()
+                .expect("Transport::unary(..)` polled after completion"))),
         })
     }
 }
@@ -136,9 +136,9 @@ where
                         Encode::encode::<{ crate::DATABUF_CONFIG }>(&val, buf).map(|()| true)
                     }
                 }),
-            Err(ref mut err) => {
-                Poll::Ready(Err(err.take().expect("Transport::server_stream(..)` polled after completion")))
-            }
+            Err(ref mut err) => Poll::Ready(Err(err
+                .take()
+                .expect("Transport::server_stream(..)` polled after completion"))),
         })
     }
 }

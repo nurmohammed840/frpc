@@ -35,4 +35,3 @@ pub trait Service {
     where
         TR: Transport + Send;
 }
-

@@ -1,5 +1,5 @@
-use crate::CodeGen;
 use super::IdentMap;
+use crate::CodeGen;
 pub mod decoder;
 pub mod encoder;
 pub mod stub;
@@ -8,7 +8,11 @@ use crate::{fmt, Fmt};
 use frpc_message::*;
 use std::fmt::{Result, Write};
 
-fn fmt_tuple<'a>(fields: &'a [TupleField], scope: &'static str, ident_map: &'a IdentMap) -> fmt!(type 'a) {
+fn fmt_tuple<'a>(
+    fields: &'a [TupleField],
+    scope: &'static str,
+    ident_map: &'a IdentMap,
+) -> fmt!(type 'a) {
     Fmt(move |f| {
         write!(f, "d.tuple(")?;
         for TupleField { ty, .. } in fields.iter() {

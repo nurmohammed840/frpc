@@ -1,13 +1,14 @@
 use frpc::*;
+use std::future::pending;
 
 async fn sleep_for_eternity() {
-    std::future::pending::<()>().await;
+    let _: () = pending().await;
 }
 
 fn stream_sleep_for_eternity() -> impl Output {
     sse!({
         yield "Going to sleep for eternity";
-        std::future::pending::<()>().await;
+        let _: () = pending().await;
     })
 }
 

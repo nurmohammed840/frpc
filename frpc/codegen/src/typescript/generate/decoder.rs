@@ -35,7 +35,11 @@ pub fn main(f: &mut impl Write, provider: &CodeGen, ident_map: &IdentMap) -> Res
                                 EnumKind::Tuple(fields) => {
                                     for (i, TupleField { doc, ty }) in fields.iter().enumerate() {
                                         write_doc_comments(f, doc)?;
-                                        writeln!(f, " {i}: {}(),", fmt_ty(ty, "struct", ident_map))?;
+                                        writeln!(
+                                            f,
+                                            " {i}: {}(),",
+                                            fmt_ty(ty, "struct", ident_map)
+                                        )?;
                                     }
                                 }
                                 EnumKind::Unit => {}
@@ -56,7 +60,11 @@ pub fn main(f: &mut impl Write, provider: &CodeGen, ident_map: &IdentMap) -> Res
                 f.write_str("}\n")?;
             }
             CustomTypeKind::Tuple(data) => {
-                writeln!(f, "return {}();", fmt_tuple(&data.fields, "struct", ident_map))?;
+                writeln!(
+                    f,
+                    "return {}();",
+                    fmt_tuple(&data.fields, "struct", ident_map)
+                )?;
             }
         }
         writeln!(f, "}},")?;

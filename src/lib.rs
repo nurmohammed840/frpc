@@ -167,4 +167,3 @@ where
         G::poll_resume(self, cx)
     }
 }
-

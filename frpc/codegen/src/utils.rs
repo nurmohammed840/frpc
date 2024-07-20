@@ -54,4 +54,3 @@ pub fn uppercase_first(data: &str) -> String {
 //     }
 //     out
 // }
-

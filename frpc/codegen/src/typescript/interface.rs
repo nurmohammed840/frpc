@@ -18,7 +18,12 @@ impl Display for EnumReprValue {
     }
 }
 
-pub fn gen_type(f: &mut impl Write, ident_map: &IdentMap, path: &str, kind: &CustomTypeKind) -> Result {
+pub fn gen_type(
+    f: &mut impl Write,
+    ident_map: &IdentMap,
+    path: &str,
+    kind: &CustomTypeKind,
+) -> Result {
     let ident = &ident_map[path];
     match kind {
         CustomTypeKind::Unit(unit) => {
@@ -58,7 +63,10 @@ pub fn gen_type(f: &mut impl Write, ident_map: &IdentMap, path: &str, kind: &Cus
         }
         CustomTypeKind::Tuple(data) => {
             write_doc_comments(f, &data.doc)?;
-            let fields = join(data.fields.iter().map(|f| fmt_js_ty(&f.ty, ident_map)), ", ");
+            let fields = join(
+                data.fields.iter().map(|f| fmt_js_ty(&f.ty, ident_map)),
+                ", ",
+            );
             writeln!(f, "export type {ident} = [{fields}];")?;
         }
         CustomTypeKind::Enum(data) => {
@@ -125,14 +133,25 @@ pub fn fmt_js_ty(ty: &Ty, ident_map: &IdentMap) -> String {
         .to_string(),
 
         Ty::Option(ty) => format!("use.Option<{}>", fmt_js_ty(ty, ident_map)),
-        Ty::Result(ty) => format!("use.Result<{}, {}>", fmt_js_ty(&ty.0, ident_map), fmt_js_ty(&ty.1, ident_map)),
+        Ty::Result(ty) => format!(
+            "use.Result<{}, {}>",
+            fmt_js_ty(&ty.0, ident_map),
+            fmt_js_ty(&ty.1, ident_map)
+        ),
 
-        Ty::Map { ty, .. } => format!("Map<{}, {}>", fmt_js_ty(&ty.0, ident_map), fmt_js_ty(&ty.1, ident_map)),
+        Ty::Map { ty, .. } => format!(
+            "Map<{}, {}>",
+            fmt_js_ty(&ty.0, ident_map),
+            fmt_js_ty(&ty.1, ident_map)
+        ),
         Ty::Tuple(tys) => {
             if tys.is_empty() {
                 "null".to_string()
             } else {
-                format!("[{}]", join(tys.iter().map(|ty| fmt_js_ty(ty, ident_map)), ", "))
+                format!(
+                    "[{}]",
+                    join(tys.iter().map(|ty| fmt_js_ty(ty, ident_map)), ", ")
+                )
             }
         }
         Ty::CustomType(path) => ident_map[path.as_str()].to_owned(),

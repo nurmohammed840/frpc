@@ -1,69 +1,80 @@
 //@ts-ignore
-import { deferred, Deferred } from "https://deno.land/std@0.158.0/async/mod.ts";
+import { Deferred, deferred } from "https://deno.land/std@0.158.0/async/mod.ts";
 // import { RpcTransport } from "./http.transport";
 
 export interface Option {
-    protocols?: string | string[],
-    binaryType: "arraybuffer" | "blob"
+  protocols?: string | string[];
+  binaryType: "arraybuffer" | "blob";
 }
 
 export class Socket {
-    // deno-lint-ignore no-explicit-any
-    #reader: ReadableStreamDefaultReader<MessageEvent<any>>;
+  // deno-lint-ignore no-explicit-any
+  #reader: ReadableStreamDefaultReader<MessageEvent<any>>;
 
-    static async connect(url: string | URL, opt: Option = { binaryType: "blob" }) {
-        const ws = new WebSocket(url, opt.protocols);
-        ws.binaryType = opt.binaryType;
-        const closed = deferred<CloseEvent>()
+  static async connect(
+    url: string | URL,
+    opt: Option = { binaryType: "blob" },
+  ) {
+    const ws = new WebSocket(url, opt.protocols);
+    ws.binaryType = opt.binaryType;
+    const closed = deferred<CloseEvent>();
 
-        const readableStream: ReadableStream = await new Promise((resolve, reject) => {
-            ws.onerror = reject;
-            ws.onopen = () => {
-                resolve(new ReadableStream({
-                    start(controler) {
-                        ws.onmessage = (msg) => controler.enqueue(msg)
-                        ws.onerror = (err) => controler.error(err)
-                        ws.onclose = (ev) => {
-                            closed.resolve(ev)
-                            controler.close();
-                        }
-                    }
-                }))
-            }
-        })
-        return new Socket(ws, closed, readableStream);
+    const readableStream: ReadableStream = await new Promise(
+      (resolve, reject) => {
+        ws.onerror = reject;
+        ws.onopen = () => {
+          resolve(
+            new ReadableStream({
+              start(controler) {
+                ws.onmessage = (msg) => controler.enqueue(msg);
+                ws.onerror = (err) => controler.error(err);
+                ws.onclose = (ev) => {
+                  closed.resolve(ev);
+                  controler.close();
+                };
+              },
+            }),
+          );
+        };
+      },
+    );
+    return new Socket(ws, closed, readableStream);
+  }
+
+  constructor(
+    private ws: WebSocket,
+    public readonly closed: Deferred<CloseEvent>,
+    stream: ReadableStream,
+  ) {
+    this.#reader = stream.getReader();
+    closed.then(() => {
+      if (stream.locked) this.#reader.releaseLock();
+    });
+  }
+
+  get bufferedAmount() {
+    return this.ws.bufferedAmount;
+  }
+
+  send(data: string | ArrayBufferLike | Blob | ArrayBufferView) {
+    this.ws.send(data);
+  }
+
+  read() {
+    return this.#reader.read();
+  }
+
+  async *[Symbol.asyncIterator]() {
+    while (true) {
+      const { done, value } = await this.read();
+      if (done) return value;
+      yield value;
     }
+  }
 
-    constructor(private ws: WebSocket, public readonly closed: Deferred<CloseEvent>, stream: ReadableStream) {
-        this.#reader = stream.getReader();
-        closed.then(() => {
-            if (stream.locked) this.#reader.releaseLock()
-        })
-    }
-
-    get bufferedAmount() {
-        return this.ws.bufferedAmount
-    }
-
-    send(data: string | ArrayBufferLike | Blob | ArrayBufferView) {
-        this.ws.send(data)
-    }
-
-    read() {
-        return this.#reader.read()
-    }
-
-    async *[Symbol.asyncIterator]() {
-        while (true) {
-            const { done, value } = await this.read();
-            if (done) return value
-            yield value
-        }
-    }
-
-    close(code?: number, reason?: string) {
-        this.ws.close(code, reason)
-    }
+  close(code?: number, reason?: string) {
+    this.ws.close(code, reason);
+  }
 }
 
 // export class WebSocketTransport implements RpcTransport {

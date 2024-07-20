@@ -1,7 +1,7 @@
 {
-    "deno.enable": true,
-    "deno.lint": false,
-    // "rust-analyzer.check.command": "clippy",
-    // "rust-analyzer.inlayHints.lifetimeElisionHints.enable": "always",
-    // "rust-analyzer.inlayHints.lifetimeElisionHints.useParameterNames": true,
+  "deno.enable": true,
+  "deno.lint": false
+  // "rust-analyzer.check.command": "clippy",
+  // "rust-analyzer.inlayHints.lifetimeElisionHints.enable": "always",
+  // "rust-analyzer.inlayHints.lifetimeElisionHints.useParameterNames": true,
 }

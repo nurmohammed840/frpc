@@ -1,28 +1,31 @@
 #!/usr/bin/env -S deno run --allow-net=localhost --unsafely-ignore-certificate-errors=localhost
 
-import { assertEquals, assertThrows } from "https://deno.land/std@0.175.0/testing/asserts.ts";
+import {
+  assertEquals,
+  assertThrows,
+} from "https://deno.land/std@0.175.0/testing/asserts.ts";
 import { HttpTransport } from "../../target/rpc/http.transport.ts";
 import Lib, { Log } from "../../target/rpc/EchoTest.ts";
 
 let lib = new Lib(new HttpTransport("https://localhost:4433/rpc/echo"));
 
-let MAX_U8 = (1 << 8) - 1
-let MAX_U16 = (1 << 16) - 1
-let MAX_U32 = Number((1n << 32n) - 1n)
-let MAX_U64 = (1n << 64n) - 1n
-let MAX_U128 = (1n << 128n) - 1n
+let MAX_U8 = (1 << 8) - 1;
+let MAX_U16 = (1 << 16) - 1;
+let MAX_U32 = Number((1n << 32n) - 1n);
+let MAX_U64 = (1n << 64n) - 1n;
+let MAX_U128 = (1n << 128n) - 1n;
 
 let MIN_I8 = -(1 << 8 - 1);
 let MIN_I16 = -(1 << 16 - 1);
-let MIN_I32 = Number(-(1n << 32n - 1n))
-let MIN_I64 = -(1n << 64n - 1n)
-let MIN_I128 = -(1n << 128n - 1n)
+let MIN_I32 = Number(-(1n << 32n - 1n));
+let MIN_I64 = -(1n << 64n - 1n);
+let MIN_I128 = -(1n << 128n - 1n);
 
 let MAX_I8 = -MIN_I8 - 1;
 let MAX_I16 = -MIN_I16 - 1;
-let MAX_I32 = -MIN_I32 - 1
-let MAX_I64 = -MIN_I64 - 1n
-let MAX_I128 = -MIN_I128 - 1n
+let MAX_I32 = -MIN_I32 - 1;
+let MAX_I64 = -MIN_I64 - 1n;
+let MAX_I128 = -MIN_I128 - 1n;
 
 await lib.log(Log.Disable)();
 
@@ -108,21 +111,21 @@ assertEquals("Hello World!", await lib.echo_str("Hello World!")());
 let map = new Map([["2", 2], ["1", 1], ["3", 3]]);
 assertEquals(map, await lib.echo_map(map)());
 assertEquals(
-    [["1", 1], ["2", 2], ["3", 3]],
-    [...(await lib.echo_sorted_map(map)()).entries()]
+  [["1", 1], ["2", 2], ["3", 3]],
+  [...(await lib.echo_sorted_map(map)()).entries()],
 );
 
 // -------------------------------------------------------
 
 let bufs = {
-    vec_2d: Float32Array.from([1.2, 2.3]),
-    vec_3d: Float64Array.from([3.4, 4.5, 5.6]),
-    floats: Float32Array.from([42]),
-    long_floats: Float64Array.from([42]),
-    sorted_nums: Int8Array.from([2, 0, 1, -1]),
-    big_nums: [42n, BigInt(Number.MAX_SAFE_INTEGER) * 2n],
-    bytes: Uint8Array.from([1, 2, 3]),
-}
+  vec_2d: Float32Array.from([1.2, 2.3]),
+  vec_3d: Float64Array.from([3.4, 4.5, 5.6]),
+  floats: Float32Array.from([42]),
+  long_floats: Float64Array.from([42]),
+  sorted_nums: Int8Array.from([2, 0, 1, -1]),
+  big_nums: [42n, BigInt(Number.MAX_SAFE_INTEGER) * 2n],
+  bytes: Uint8Array.from([1, 2, 3]),
+};
 
 let echo_bufs = await lib.echo_bufs(bufs)();
 bufs.sorted_nums = Int8Array.from([-1, 0, 1, 2]);

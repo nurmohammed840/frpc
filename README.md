@@ -122,6 +122,14 @@ let sse = new ServerSentEvents(new HttpTransport("<URL>"));
 for await (const ev of sse.get_events(3)()) {
   console.log(ev);
 }
+
+// Cancelation example
+let task = new AbortController();
+setTimeout(() => task.abort(), 5000); // Abort the stream after 5 seconds
+
+for await (const ev of sse.get_events(7)({ signal: task.signal })) {
+  console.log(ev);
+}
 ```
 
 It's that easy!
