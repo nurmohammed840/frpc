@@ -1,26 +1,19 @@
 use frpc::*;
-use std::time::Duration;
-use tokio::time::sleep;
 
-const MSG: &str = "deadline passed!";
-
-async fn unary_call(deadline: u8) -> Result<(), &'static str> {
-    sleep(Duration::from_secs(deadline.into())).await;
-    Err(MSG)
+async fn sleep_for_eternity() {
+    std::future::pending::<()>().await;
 }
 
-fn stream(deadline: u8) -> impl Output {
+fn stream_sleep_for_eternity() -> impl Output {
     sse!({
-        yield format!("waiting for {deadline} secs");
-        sleep(Duration::from_secs(deadline.into())).await;
-        yield format!("timeout!");
-        Result::<(), _>::Err(MSG)
+        yield "Going to sleep for eternity";
+        std::future::pending::<()>().await;
     })
 }
 
 frpc::declare! {
     pub service Cancellation {
-        rpc unary_call = 1;
-        rpc stream = 2;
+        rpc sleep_for_eternity = 1;
+        rpc stream_sleep_for_eternity = 2;
     }
 }

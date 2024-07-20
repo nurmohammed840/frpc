@@ -101,7 +101,7 @@ where
                 .poll(cx)
                 .map(|ret| Encode::encode::<{ crate::DATABUF_CONFIG }>(&ret, buf)),
             Err(ref mut err) => {
-                Poll::Ready(Err(err.take().expect("unary()` polled after completion")))
+                Poll::Ready(Err(err.take().expect("Transport::unary(..)` polled after completion")))
             }
         })
     }
@@ -126,7 +126,7 @@ where
             Err(error) => Err(Some(io::Error::new(io::ErrorKind::InvalidInput, error))),
         };
         transport.server_stream(move |cx, buf| match state {
-            Ok(ref mut this) => unsafe { Pin::new_unchecked(&mut this.0) }
+            Ok(ref mut async_generator) => unsafe { Pin::new_unchecked(&mut async_generator.0) }
                 .poll_resume(cx)
                 .map(|gen_state| match gen_state {
                     GeneratorState::Yielded(val) => {
@@ -137,7 +137,7 @@ where
                     }
                 }),
             Err(ref mut err) => {
-                Poll::Ready(Err(err.take().expect("unary()` polled after completion")))
+                Poll::Ready(Err(err.take().expect("Transport::server_stream(..)` polled after completion")))
             }
         })
     }

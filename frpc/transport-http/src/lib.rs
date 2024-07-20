@@ -100,7 +100,7 @@ impl Transport for RpcResponder<'_> {
         let mut buf = vec![];
 
         if let Some(output) = poll_fn(|cx| match self.0.sender.poll_reset(cx) {
-            Poll::Ready(_reset_reason) => Poll::Ready(None),
+            Poll::Ready(_) => Poll::Ready(None),
             Poll::Pending => poll(cx, &mut buf).map(Some),
         })
         .await
@@ -139,9 +139,18 @@ impl Transport for RpcResponder<'_> {
         let mut stream = h2x::Responder { inner };
         let mut buf = vec![0; 4];
 
-        while let Ok(done) = poll_fn(|cx| poll(cx, &mut buf)).await {
+        while let Ok(done) = poll_fn(|cx| match stream.inner.poll_reset(cx) {
+            Poll::Pending => match poll(cx, &mut buf) {
+                Poll::Pending => Poll::Pending,
+                Poll::Ready(result) => Poll::Ready(result.map_err(|_| ())),
+            },
+            Poll::Ready(_) => Poll::Ready(Err(())),
+        })
+        .await
+        {
             let len = buf.len() - 4;
             if len >= (1 << 31) {
+                stream.inner.send_reset(h2::Reason::INTERNAL_ERROR);
                 break;
             }
             unsafe {
