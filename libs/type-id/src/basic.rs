@@ -57,4 +57,4 @@ macro_rules! impl_str_types {
     )*);
 }
 
-impl_str_types!(&str, Box<dyn std::fmt::Display>, Box<dyn std::error::Error>, Box<dyn std::error::Error + Send + Sync>);
+impl_str_types!(str, Box<dyn std::fmt::Display>, Box<dyn std::error::Error>, Box<dyn std::error::Error + Send + Sync>);

@@ -9,7 +9,7 @@ use std::{rc::Rc, sync::Arc};
 
 macro_rules! impl_type_id_for {
     [$($ty: ty), *] => {$(
-        impl<T: TypeId> TypeId for $ty {
+        impl<T: TypeId + ?Sized> TypeId for $ty {
             fn ty(c: &mut CostomTypes) -> Ty {
                 T::ty(c)
             }
