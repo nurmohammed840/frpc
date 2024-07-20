@@ -4,16 +4,16 @@ export interface Write {
 }
 
 export interface RpcTransport {
-    unary(): Write & { call(signal: AbortSignal): Promise<Uint8Array> }
-    sse(): Write & { call(signal: AbortSignal): AsyncGenerator<Uint8Array> }
+    unary(): Write & { call(_?: RequestInit): Promise<Uint8Array> }
+    sse(): Write & { call(_?: RequestInit): AsyncGenerator<Uint8Array> }
     close(): Promise<void>
 }
 
-export interface FetchOption extends Pick<RequestInit, 'mode' | 'keepalive' | 'headers'> { }
+export interface HttpTransportRequestInit extends Pick<RequestInit, 'mode' | 'keepalive' | 'headers'> { }
 
 export class HttpTransport implements RpcTransport {
-    constructor(public url: URL | RequestInfo, public option = { maxChunkSize: 8 * 1024 * 1024, fetchOption: {} as FetchOption | undefined }) { }
-    unary(): Write & { call(s: AbortSignal): Promise<Uint8Array> } {
+    constructor(public url: URL | RequestInfo, public option = { maxChunkSize: 8 * 1024 * 1024, requestInit: {} as HttpTransportRequestInit | undefined }) { }
+    unary() {
         const { url, option } = this;
         const chunks: Uint8Array[] = [];
         return {
@@ -21,9 +21,9 @@ export class HttpTransport implements RpcTransport {
                 chunks.push(bytes)
             },
             flush() { },
-            async call(signal) {
+            async call(requestInit: RequestInit) {
                 const body = concat_uint8(chunks);
-                const res = await fetch(url, { ...option.fetchOption, method: "POST", body, signal });
+                const res = await fetch(url, { ...option.requestInit, ...requestInit, method: "POST", body });
                 if (!res.ok) {
                     throw new Error("Bad request");
                 }
@@ -41,9 +41,9 @@ export class HttpTransport implements RpcTransport {
             },
             flush() { },
 
-            async *call(signal: AbortSignal) {
+            async *call(requestInit: RequestInit) {
                 const body = concat_uint8(chunks);
-                const res = await fetch(url, { ...option.fetchOption, method: "POST", body, signal });
+                const res = await fetch(url, { ...option.requestInit, ...requestInit, method: "POST", body });
                 if (!res.body) {
                     throw new Error("unexpected empty body");
                 }

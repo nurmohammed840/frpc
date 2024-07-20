@@ -53,7 +53,6 @@ async fn main() -> Result<()> {
     }
 
     let config = Server::config("examples/key.pem", "examples/cert.pem")?;
-
     let server = Server::bind("127.0.0.1:4433", config)
         .await?
         .with_graceful_shutdown();

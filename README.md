@@ -68,8 +68,8 @@ Client then call those function as follow:
 
 ```ts
 let greeter = new Greeter(new HttpTransport("<URL>"));
-console.log(await greeter.SayHello({ name: "Foo!" })); // { message: "Hello Foo!" }
-console.log(await greeter.SayHelloAgain({ name: "Foo!" })); // { message: "Hello Again, Foo!" }
+console.log(await greeter.SayHello({ name: "Foo!" })()); // { message: "Hello Foo!" }
+console.log(await greeter.SayHelloAgain({ name: "Foo!" })()); // { message: "Hello Again, Foo!" }
 ```
 
 You get the typesafe client API for free! Still not impressed ?!
@@ -119,7 +119,7 @@ The client then calls this function as follow:
 
 ```ts
 let sse = new ServerSentEvents(new HttpTransport("<URL>"));
-for await (const ev of sse.get_events(3)) {
+for await (const ev of sse.get_events(3)()) {
   console.log(ev);
 }
 ```

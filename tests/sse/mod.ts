@@ -7,7 +7,7 @@ import Lib from "../../target/rpc/SSETest.ts";
 let lib = new Lib(new HttpTransport("https://localhost:4433/rpc/sse"));
 
 {
-    let buffers = lib.buffers();
+    let buffers = lib.buffers()();
     for (let i = 1; ; i++) {
         let { value, done } = await buffers.next()
         if (done) {
@@ -20,7 +20,7 @@ let lib = new Lib(new HttpTransport("https://localhost:4433/rpc/sse"));
 }
 
 async function test_chunks(iter: number, size: number) {
-    let chunks = lib.chunks(iter, size);
+    let chunks = lib.chunks(iter, size)();
     let i = 0;
     for await (const chunk of chunks) {
         assert(chunk.every(v => v == i))

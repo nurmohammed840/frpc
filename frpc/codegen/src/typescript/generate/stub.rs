@@ -28,7 +28,7 @@ pub fn main(f: &mut impl Write, type_def: &TypeDef, ident_map: &IdentMap) -> Res
                     FuncOutput::Unary(_) => "unary",
                     FuncOutput::ServerStream { .. } => "sse",
                 };
-                writeln!(f, "return use.make_call(this.rpc, {rpc_type:?}, {index},")?;
+                writeln!(f, "return (requestInit: RequestInit = {{}}) => use.make_call(this.rpc, {rpc_type:?}, {index}, requestInit,")?;
                 writeln!(f, "d => {{")?;
                 for (num, arg) in args.iter().enumerate() {
                     match arg {

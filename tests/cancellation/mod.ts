@@ -7,14 +7,18 @@ let lib = new Cancellation(new HttpTransport("https://localhost:4433/rpc/cancell
 let deadline = 2;
 
 async function make_unary_call(timeout: number) {
-    let req = lib.unary_call(deadline);
-    setTimeout(() => req.abort("TimeOut!"), timeout * 1000);
+    let abortController = new AbortController();
+    let req = lib.unary_call(deadline)({ signal: abortController.signal });
+    setTimeout(() => abortController.abort("TimeOut!"), timeout * 1000);
+
     assertEquals(await req, { type: "Err", value: "deadline passed!" });
 }
 
 async function make_stream_rpc_call(timeout: number) {
-    let stream = lib.stream(deadline);
-    setTimeout(() => stream.abort("TimeOut!"), timeout * 1000);
+    let abortController = new AbortController();
+    let stream = lib.stream(deadline)({ signal: abortController.signal });
+    setTimeout(() => abortController.abort("TimeOut!"), timeout * 1000);
+
     assertEquals((await stream.next()).value, `waiting for ${deadline} secs`);
     assertEquals((await stream.next()).value, "timeout!");
     assertEquals((await stream.next()).value, { type: "Err", value: "deadline passed!" });

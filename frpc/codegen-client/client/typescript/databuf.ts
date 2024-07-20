@@ -29,8 +29,8 @@ export interface Write {
 }
 
 export interface RpcTransport {
-	unary(): Write & { call(signal: AbortSignal): Promise<Uint8Array> }
-	sse(): Write & { call(signal: AbortSignal): AsyncGenerator<Uint8Array> }
+	unary(): Write & { call(_: RequestInit): Promise<Uint8Array> }
+	sse(): Write & { call(_: RequestInit): AsyncGenerator<Uint8Array> }
 	close(): Promise<void>
 }
 
@@ -51,37 +51,24 @@ type Buf<T extends "u8" | "i8" | "f32" | "f64"> =
 	T extends "f64" ? Float64Array :
 	never;
 
-interface Abortable {
-	/**
-	 * ## Warning
-	 * 
-	 * Changes made before a cancellation are not rolled back.
-	 */
-	abort(reason?: any): void;
-}
-
 export function make_call<
 	T extends "unary" | "sse",
-	RTy extends ReturnType<ReturnType<RpcTransport[T]>["call"]>,
+	ReturnTy extends ReturnType<ReturnType<RpcTransport[T]>["call"]>,
 	Result,
 >(
 	rpc: RpcTransport,
 	type: T,
 	id: number,
+	requestInit: RequestInit,
 	encoder: (d: BufWriter) => void,
-	decoder: (d: RTy) => Result
-): Result & Abortable {
+	decoder: (d: ReturnTy) => Result
+): Result {
 	let fn = rpc[type]();
 	let d = new BufWriter(fn);
 	d.u16(id);
 	encoder(d);
 	d.flush();
-	let controller = new AbortController();
-	return Object.assign(decoder(fn.call(controller.signal) as any) as any, {
-		abort(reason?: any) {
-			controller.abort(reason)
-		}
-	})
+	return decoder(fn.call(requestInit) as any)
 }
 
 export type Decode<T> = (this: Decoder) => T;
