@@ -55,7 +55,7 @@ impl_ty_class!(Set for HashSet<T>         where T: TypeId + Eq + Hash);
 impl_ty_class!(Map for BTreeMap<K, V>     where K: TypeId + Ord, V: TypeId);
 impl_ty_class!(Map for HashMap<K, V>      where K: TypeId + Eq + Hash, V: TypeId);
 
-impl<T: TypeId> TypeId for &[T] {
+impl<T: TypeId> TypeId for [T] {
     fn ty(costom_types: &mut CostomTypes) -> Ty {
         Ty::Set {
             variant: SetVariant::Vec,
