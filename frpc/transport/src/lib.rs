@@ -1,3 +1,4 @@
+pub use frpc_transport_http;
 pub use frpc_transport_http::Ctx;
 use frpc_transport_http::{
     self as http,
