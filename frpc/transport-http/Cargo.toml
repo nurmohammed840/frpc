@@ -5,4 +5,4 @@ edition = "2021"
 
 [dependencies]
 frpc-transport-core = { version = "0.1", path = "../transport-core" }
-h2x = "0.5"
+h2x = { version = "0.6", git = "https://github.com/nurmohammed840/h2x" }

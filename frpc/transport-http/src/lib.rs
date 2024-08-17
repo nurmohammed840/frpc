@@ -45,7 +45,7 @@ impl Ctx {
                     return StatusCode::PAYLOAD_TOO_LARGE;
                 }
                 let mut buf = Vec::with_capacity(len as usize);
-                while let Some(bytes) = self.req.data().await {
+                while let Some(bytes) = self.req.body.data().await {
                     let Ok(bytes) = bytes else {
                         return StatusCode::PARTIAL_CONTENT;
                     };
